@@ -10,30 +10,19 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      # SSH 키 설정 추가
-      - name: Configure SSH key
-        run: |
-          mkdir -p ~/.ssh/
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
-
-      # Docker 로그인
       - name: Login to DockerHub
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Docker 이미지 빌드 및 푸시
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/uniment:latest
+          tags: ssumuss/uniment:latest  # DOCKERHUB_USERNAME 대신 직접 지정
 
-      # EC2 배포
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
         with:
@@ -41,10 +30,7 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            whoami
-            pwd
-            cd ~/uniment-server || exit 1
-            git pull origin main
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/uniment:latest
+            cd ~/uniment-server
+            sudo docker pull ssumuss/uniment:latest
             sudo docker-compose down
             sudo docker-compose up -d

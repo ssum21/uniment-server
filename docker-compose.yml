@@ -1,7 +1,8 @@
+# docker-compose.yml
 version: '3'
 services:
   app:
-    image: ${DOCKERHUB_USERNAME}/uniment:latest
+    image: ssumuss/uniment:latest  # DOCKERHUB_USERNAME 대신 직접 이미지 이름 지정
     ports:
       - "5555:5555"
     environment:
