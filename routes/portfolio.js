@@ -46,6 +46,21 @@ router.post('/', async (req, res) => {
     }
 });
 
+// 포트폴리오 목록 조회 list
+router.get('/user/list', async (req, res) => {
+  try {
+    // userId가 MongoDB ObjectId 형식인지 확인
+    if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
+      return res.status(400).json({ message: '유효하지 않은 userId 형식입니다.' });
+    }
+
+    const portfolios = await Portfolio.find({ userId: req.params.userId });
+    res.json(portfolios);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // 포트폴리오 목록 조회
 router.get('/user/:userId', async (req, res) => {
   try {

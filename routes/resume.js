@@ -3,6 +3,19 @@ const router = express.Router();
 const Resume = require('../models/Resume');
 const mongoose = require('mongoose'); // mongoose 추가
 
+// 특정 userId의 모든 Resume 조회
+router.get('/user/:userId', async (req, res) => {
+  try {
+    const resumes = await Resume.find({ userId: req.params.userId });
+    if (!resumes || resumes.length === 0) {
+      return res.status(404).json({ message: '해당 사용자의 자기소개서를 찾을 수 없습니다.' });
+    }
+    res.json(resumes);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Resume 조회
 router.get('/:id', async (req, res) => {
   try {
