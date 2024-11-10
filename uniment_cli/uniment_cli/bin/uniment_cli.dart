@@ -175,7 +175,7 @@ class UnimentCLI {
       print('등록된 과목이 없습니다.');
       return;
     }
-
+    print("\n");
     final headers = ['과목코드', '과목명', '학점', '담당교수'];
     final columnWidths = [10, 30, 6, 15];
 
@@ -263,7 +263,7 @@ class UnimentCLI {
       print('등록된 포트폴리오 항목이 없습니다.');
       return;
     }
-
+    print(" ");
     final headers = ['유형', '제목', '날짜', '설명'];
     final columnWidths = [15, 25, 12, 30];
 
