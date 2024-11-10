@@ -1,8 +1,9 @@
+// models/Resume.js
 const mongoose = require('mongoose');
 
 const resumeSchema = new mongoose.Schema({
   userId: {
-    type: String,  // String 타입으로 유지
+    type: String,
     required: true
   },
   company: {
@@ -18,7 +19,7 @@ const resumeSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['작성중', '제출완료', '서류합격', '최종합격', '불합격'],
+    enum: ['작성중', '작성완료', '제출완료', '서류합격', '최종합격', '불합격'], // '작성완료' 추가
     default: '작성중'
   }
 }, { 

@@ -233,9 +233,17 @@ class UnimentCLI {
   }
 
   Future<void> viewPortfolio() async {
+    print('사용자의 userId를 입력하세요: ');
+    final userId = stdin.readLineSync();
+
+    if (userId == null || userId.isEmpty) {
+      printError('userId가 필요합니다.');
+      return;
+    }
+
     final loadingMessage = await showLoadingAsync('포트폴리오를 불러오는 중...');
     try {
-      final response = await getWithTimeout('$baseUrl/portfolio');
+      final response = await getWithTimeout('$baseUrl/portfolio/user/$userId');
       loadingMessage.complete();
 
       if (response.statusCode == 200) {
@@ -275,22 +283,26 @@ class UnimentCLI {
   }
 
   Future<void> addPortfolio() async {
-    print('\n=== 새 포트폴리오 항목 추가 ===\n');
+    print('사용자의 userId를 입력하세요: ');
+    final userId = stdin.readLineSync();
 
+    if (userId == null || userId.isEmpty) {
+      printError('userId가 필요합니다.');
+      return;
+    }
+
+    print('\n=== 새 포트폴리오 항목 추가 ===\n');
     print('유형 (어학성적/자격증/수상경력/기타): ');
     final type = stdin.readLineSync() ?? '';
-
     print('제목: ');
     final title = stdin.readLineSync() ?? '';
-
     print('날짜 (YYYY-MM-DD): ');
     final date = stdin.readLineSync() ?? '';
-
     print('설명: ');
     final description = stdin.readLineSync() ?? '';
 
     final data = {
-      'userId': 'test123',
+      'userId': userId,
       'type': type,
       'title': title,
       'date': date,
@@ -404,9 +416,17 @@ class UnimentCLI {
   }
 
   Future<void> viewResumes() async {
+    print('사용자의 userId를 입력하세요: ');
+    final userId = stdin.readLineSync();
+
+    if (userId == null || userId.isEmpty) {
+      printError('userId가 필요합니다.');
+      return;
+    }
+
     final loadingMessage = await showLoadingAsync('자기소개서를 불러오는 중...');
     try {
-      final response = await getWithTimeout('$baseUrl/resume/user/test123');
+      final response = await getWithTimeout('$baseUrl/resume/user/$userId');
       loadingMessage.complete();
 
       if (response.statusCode == 200) {
@@ -423,12 +443,12 @@ class UnimentCLI {
 
   void printResumeTable(List<dynamic> resumes) {
     if (resumes.isEmpty) {
-      print('작성된 자기소개서가 없습니다.');
+      print('등록된 자기소개서 항목이 없습니다.');
       return;
     }
 
-    final headers = ['회사명', '직무', '작성일', '상태'];
-    final columnWidths = [20, 15, 12, 10];
+    final headers = ['회사명', '직무', '상태', '소개글'];
+    final columnWidths = [15, 20, 10, 30];
 
     printTableRow(headers, columnWidths, isHeader: true);
     print('━' * (columnWidths.reduce((a, b) => a + b) + headers.length * 3));
@@ -437,8 +457,8 @@ class UnimentCLI {
       final row = [
         resume['company']['name'],
         resume['company']['position'],
-        resume['createdAt'].toString().substring(0, 10),
-        resume['status']
+        resume['status'],
+        resume['content']['introduction']
       ];
       printTableRow(
           row.map<String>((e) => e.toString()).toList(), columnWidths);
@@ -446,28 +466,43 @@ class UnimentCLI {
   }
 
   Future<void> addResume() async {
-    print('\n=== 새 자기소개서 작성 ===\n');
+    print('사용자의 userId를 입력하세요: ');
+    final userId = stdin.readLineSync();
 
+    if (userId == null || userId.isEmpty) {
+      printError('userId가 필요합니다.');
+      return;
+    }
+
+    print('\n=== 새 자기소개서 작성 ===\n');
     print('회사명: ');
     final company = stdin.readLineSync() ?? '';
-
     print('직무: ');
     final position = stdin.readLineSync() ?? '';
-
+    print('직무 형태 (정규직/인턴): ');
+    final jobType = stdin.readLineSync() ?? '';
     print('자기소개: ');
     final introduction = stdin.readLineSync() ?? '';
-
     print('지원동기: ');
     final motivation = stdin.readLineSync() ?? '';
+    print('강점: ');
+    final strength = stdin.readLineSync() ?? '';
+    print('향후 목표: ');
+    final futureGoals = stdin.readLineSync() ?? '';
 
     final data = {
-      'userId': 'test123',
-      'company': {'name': company, 'position': position},
-      'content': {'introduction': introduction, 'motivation': motivation},
+      'userId': userId,
+      'company': {'name': company, 'position': position, 'jobType': jobType},
+      'content': {
+        'introduction': introduction,
+        'motivation': motivation,
+        'strength': strength,
+        'futureGoals': futureGoals
+      },
       'status': '작성중'
     };
 
-    final loadingMessage = await showLoadingAsync('저장중...');
+    final loadingMessage = await showLoadingAsync('자기소개서 저장 중...');
     try {
       final response = await http
           .post(Uri.parse('$baseUrl/resume'),
@@ -478,7 +513,7 @@ class UnimentCLI {
       loadingMessage.complete();
 
       if (response.statusCode == 201) {
-        print('\n✅ 자기소개서가 저장되었습니다.');
+        print('\n✅ 자기소개서가 성공적으로 저장되었습니다.');
       } else {
         printError('자기소개서 저장에 실패했습니다.');
       }
