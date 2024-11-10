@@ -41,7 +41,7 @@ router.get('/email/:email', async (req, res) => {
 });
 
 // 모든 사용자 조회
-router.get('/', async (req, res) => {
+router.get('/all', async (req, res) => {
   try {
     const users = await User.find();
     res.json(users);
