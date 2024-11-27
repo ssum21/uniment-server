@@ -55,6 +55,23 @@ router.get('/all', async (req, res) => {
   }
 });
 
+// 전체 사용자 수 조회
+router.get('/total-count', async (req, res) => {
+  try {
+    const count = await User.countDocuments();
+    res.json({ 
+      totalUsers: count,
+      message: '전체 사용자 수 조회 성공'
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      message: '서버 오류가 발생했습니다.',
+      error: error.message 
+    });
+  }
+});
+
+
 // ID로 사용자 정보 조회 API
 router.get('/:userId', async (req, res) => {
   try {
@@ -73,20 +90,5 @@ router.get('/:userId', async (req, res) => {
   }
 });
 
-// 전체 사용자 수 조회
-router.get('/total-count', async (req, res) => {
-  try {
-    const count = await User.countDocuments();
-    res.json({ 
-      totalUsers: count,
-      message: '전체 사용자 수 조회 성공'
-    });
-  } catch (error) {
-    res.status(500).json({ 
-      message: '서버 오류가 발생했습니다.',
-      error: error.message 
-    });
-  }
-});
 
 module.exports = router;
