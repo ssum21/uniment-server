@@ -39,12 +39,64 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// 소셜 로그인
+// 회원가입 API
+router.post('/register', async (req, res) => {
+  try {
+    const { email, password, name } = req.body;
+    
+    // 이메일 중복 체크
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: '이미 존재하는 이메일입니다.'
+      });
+    }
+
+    // 새 사용자 생성
+    const user = new User({
+      email,
+      password,
+      name,
+      socialType: 'local'
+    });
+    await user.save();
+
+    const token = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.status(201).json({
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '서버 오류가 발생했습니다.'
+    });
+  }
+});
+
+// 소셜 로그인 API
 router.post('/social-login', async (req, res) => {
   try {
     const { socialType, socialId, email, name } = req.body;
     
-    let user = await User.findOne({ socialType, socialId });
+    let user = await User.findOne({ 
+      $or: [
+        { socialId, socialType },
+        { email }
+      ]
+    });
+
     if (!user) {
       user = await User.create({
         socialType,
@@ -54,11 +106,27 @@ router.post('/social-login', async (req, res) => {
         password: Math.random().toString(36)
       });
     }
-    
-    const token = generateToken(user);
-    res.json({ success: true, token, user: sanitizeUser(user) });
+
+    const token = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name
+      }
+    });
   } catch (error) {
-    res.status(500).json({ message: '서버 오류가 발생했습니다.' });
+    res.status(500).json({
+      success: false,
+      message: '서버 오류가 발생했습니다.'
+    });
   }
 });
 
