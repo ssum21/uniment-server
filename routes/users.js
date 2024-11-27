@@ -27,14 +27,19 @@ router.post('/credits', async (req, res) => {
   }
 });
 
-// 이메일로 사용자 조회
+// 이메일로 사용자 정보 조회 API
 router.get('/email/:email', async (req, res) => {
   try {
     const user = await User.findOne({ email: req.params.email });
     if (!user) {
-      return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
+      return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
     }
-    res.json(user);
+    res.json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      schoolInfo: user.schoolInfo
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -50,7 +55,7 @@ router.get('/all', async (req, res) => {
   }
 });
 
-// 사용자 정보 조회 API
+// ID로 사용자 정보 조회 API
 router.get('/:userId', async (req, res) => {
   try {
     const user = await User.findById(req.params.userId);
@@ -58,6 +63,7 @@ router.get('/:userId', async (req, res) => {
       return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
     }
     res.json({
+      id: user._id,
       name: user.name,
       email: user.email,
       schoolInfo: user.schoolInfo
