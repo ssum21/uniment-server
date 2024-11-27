@@ -56,7 +56,7 @@ router.get('/all', async (req, res) => {
 });
 
 // 전체 사용자 수 조회
-router.get('/total-count', async (req, res) => {
+router.get('/total/count', async (req, res) => {
   try {
     const count = await User.countDocuments();
     res.json({ 
