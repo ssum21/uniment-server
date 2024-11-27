@@ -9,12 +9,17 @@ const portfolioRouter = require('./routes/portfolio');
 const resumeRouter = require('./routes/resume');
 const userRouter = require('./routes/users');
 const courseRouter = require('./routes/courses');
+const authRouter = require('./routes/auth');
 require('dotenv').config();
 
 const app = express();
 
 // 미들웨어 설정
-app.use(cors());
+app.use(cors({
+  origin: '*', // 실제 배포 시에는 특정 도메인으로 제한하세요
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 // API 라우트 설정
@@ -26,6 +31,7 @@ app.use('/api/portfolio', portfolioRouter); // portfolio 라우터 연결
 app.use('/api/courses', courseRouter);
 app.use('/api/users', userRouter);
 app.use('/api/resume', resumeRouter);
+app.use('/api/auth', authRouter);
 
 // MongoDB 연결
 mongoose.connect(process.env.MONGODB_URI)
