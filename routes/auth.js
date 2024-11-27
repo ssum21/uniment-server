@@ -44,7 +44,6 @@ router.post('/register', async (req, res) => {
   try {
     const { email, password, name } = req.body;
     
-    // 이메일 중복 체크
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -53,7 +52,6 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // 새 사용자 생성
     const user = new User({
       email,
       password,
