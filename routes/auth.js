@@ -9,10 +9,34 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
     
-    if (!user || !(await user.comparePassword(password))) {
+    if (!user) {
       return res.status(401).json({
         success: false,
         message: '이메일 또는 비밀번호가 잘못되었습니다.'
+      });
+    }
+
+    try {
+      const isValidPassword = await user.comparePassword(password);
+      if (!isValidPassword) {
+        return res.status(401).json({
+          success: false,
+          message: '이메일 또는 비밀번호가 잘못되었습니다.'
+        });
+      }
+    } catch (passwordError) {
+      console.error('비밀번호 비교 중 오류:', passwordError);
+      return res.status(500).json({
+        success: false,
+        message: '비밀번호 확인 중 오류가 발생했습니다.'
+      });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET이 설정되지 않았습니다.');
+      return res.status(500).json({
+        success: false,
+        message: '서버 설정 오류가 발생했습니다.'
       });
     }
 
