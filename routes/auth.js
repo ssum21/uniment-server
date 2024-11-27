@@ -7,6 +7,14 @@ const User = require('../models/User');
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: '이메일과 비밀번호를 모두 입력해주세요.'
+      });
+    }
+
     const user = await User.findOne({ email });
     
     if (!user) {
@@ -16,32 +24,20 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    try {
-      const isValidPassword = await user.comparePassword(password);
-      if (!isValidPassword) {
-        return res.status(401).json({
-          success: false,
-          message: '이메일 또는 비밀번호가 잘못되었습니다.'
-        });
-      }
-    } catch (passwordError) {
-      console.error('비밀번호 비교 중 오류:', passwordError);
-      return res.status(500).json({
+    const isValidPassword = await user.comparePassword(password);
+    if (!isValidPassword) {
+      return res.status(401).json({
         success: false,
-        message: '비밀번호 확인 중 오류가 발생했습니다.'
-      });
-    }
-
-    if (!process.env.JWT_SECRET) {
-      console.error('JWT_SECRET이 설정되지 않았습니다.');
-      return res.status(500).json({
-        success: false,
-        message: '서버 설정 오류가 발생했습니다.'
+        message: '이메일 또는 비밀번호가 잘못되었습니다.'
       });
     }
 
     const token = jwt.sign(
-      { userId: user._id },
+      { 
+        userId: user._id,
+        email: user.email,
+        name: user.name
+      },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -56,9 +52,11 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('로그인 처리 중 오류:', error);
     res.status(500).json({
       success: false,
-      message: '서버 오류가 발생했습니다.'
+      message: '서버 오류가 발생했습니다.',
+      detail: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
