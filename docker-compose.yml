@@ -7,4 +7,5 @@ services:
       - "5555:5555"
     environment:
       - MONGODB_URI=${MONGODB_URI}
+      - JWT_SECRET=your_jwt_secret_key_here
     restart: always
