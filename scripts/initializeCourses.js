@@ -20,6 +20,8 @@ async function initializeCourses() {
     // 테스트 데이터 생성
     const coursesData = [
       {
+        university: "경희대학교",
+        major: "컴퓨터공학과",
         courseCode: "CSE103",
         courseName: "객체지향프로그래밍",
         credits: 3.0,
@@ -27,6 +29,8 @@ async function initializeCourses() {
         language: "한국어"
       },
       {
+        university: "경희대학교",
+        major: "컴퓨터공학과",
         courseCode: "SWCON253",
         courseName: "기계학습",
         credits: 3.0,
@@ -34,6 +38,8 @@ async function initializeCourses() {
         language: "영어(부분)"
       },
       {
+        university: "경희대학교",
+        major: "컴퓨터공학과",
         courseCode: "EE209",
         courseName: "논리회로",
         credits: 3.0,
@@ -41,6 +47,8 @@ async function initializeCourses() {
         language: "한국어"
       },
       {
+        university: "경희대학교",
+        major: "컴퓨터공학과",
         courseCode: "CSE305",
         courseName: "데이터베이스",
         credits: 3.0,
@@ -48,6 +56,8 @@ async function initializeCourses() {
         language: "한국어"
       },
       {
+        university: "경희대학교",
+        major: "컴퓨터공학과",
         courseCode: "SWCON103",
         courseName: "디자인적사고",
         credits: 3.0,
