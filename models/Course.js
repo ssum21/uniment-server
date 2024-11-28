@@ -2,10 +2,14 @@
 const mongoose = require('mongoose');
 
 const courseSchema = new mongoose.Schema({
-  courseCode: {
+  university: {
     type: String,
     required: true,
-    unique: true
+    index: true
+  },
+  courseCode: {
+    type: String,
+    required: true
   },
   courseName: {
     type: String,
@@ -17,23 +21,21 @@ const courseSchema = new mongoose.Schema({
   },
   courseType: {
     type: String,
-    required: true,
-    enum: ['전공필수', '전공선택', '교양필수', '교양선택']
+    required: true
   },
   language: {
     type: String,
-    enum: ['한국어', '영어']
-  },
-  university: {
-    type: String,
-    required: true,
-    default: '경희대학교'
+    default: '한국어'
   },
   major: {
     type: String,
-    required: true,
-    default: '컴퓨터공학과'
+    required: true
   }
+}, {
+  timestamps: true
 });
+
+// 대학-과목코드 복합 유니크 인덱스
+courseSchema.index({ university: 1, courseCode: 1 }, { unique: true });
 
 module.exports = mongoose.model('Course', courseSchema);

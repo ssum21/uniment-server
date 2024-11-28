@@ -201,4 +201,45 @@ router.post('/user/add-course', async (req, res) => {
   }
 });
 
+// 특정 대학의 전체 과목 조회
+router.get('/:university/all', async (req, res) => {
+  try {
+    const { university } = req.params;
+    const { major } = req.query;
+    
+    const query = { university };
+    if (major) query.major = major;
+
+    const courses = await Course.find(query)
+      .select('courseCode courseName credits courseType language major')
+      .sort('courseCode');
+    res.json(courses);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 특정 대학의 과목 검색
+router.get('/:university/search', async (req, res) => {
+  try {
+    const { university } = req.params;
+    const { keyword, major } = req.query;
+    
+    const query = {
+      university,
+      $or: [
+        { courseName: { $regex: keyword, $options: 'i' } },
+        { courseCode: { $regex: keyword, $options: 'i' } }
+      ]
+    };
+    if (major) query.major = major;
+
+    const courses = await Course.find(query)
+      .select('courseCode courseName credits courseType language major');
+    res.json(courses);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;
