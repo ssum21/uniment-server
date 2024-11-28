@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const Course = require('../models/Course');
+const UserCourse = require('../models/UserCourse');
 const mongoose = require('mongoose');
 
 // 전체 과목 조회
@@ -87,5 +88,52 @@ router.post('/courses', async (req, res) => {
   }
 });
 
+// 특정 대학/학과의 과목 목록 조회
+router.get('/university/:universityName/major/:majorName', async (req, res) => {
+  try {
+    const { universityName, majorName } = req.params;
+    const courses = await Course.find({
+      university: universityName,
+      major: majorName
+    });
+    res.json(courses);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 사용자의 수강 과목 등록
+router.post('/user/register', async (req, res) => {
+  try {
+    const { userId, university, major, courses } = req.body;
+    
+    const userCourse = new UserCourse({
+      userId,
+      university,
+      major,
+      courses: courses.map(course => ({
+        courseId: course.courseId,
+        semester: course.semester,
+        grade: course.grade
+      }))
+    });
+    
+    await userCourse.save();
+    res.status(201).json(userCourse);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// 사용자의 수강 과목 조회
+router.get('/user/:userId', async (req, res) => {
+  try {
+    const userCourses = await UserCourse.find({ userId: req.params.userId })
+      .populate('courses.courseId');
+    res.json(userCourses);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 module.exports = router;
