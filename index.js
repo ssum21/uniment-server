@@ -1,42 +1,31 @@
 // index.js
 const express = require('express');
-const { MongoClient, ServerApiVersion } = require('mongodb');
-
 const mongoose = require('mongoose');
 const cors = require('cors');
-const jwt = require('jsonwebtoken');  // JWT 모듈 추가
-const graduationRouter = require('./routes/graduation'); 
+const jwt = require('jsonwebtoken');
+
+const graduationRouter = require('./routes/graduation');
 const portfolioRouter = require('./routes/portfolio');
 const resumeRouter = require('./routes/resume');
 const userRouter = require('./routes/users');
 const courseRouter = require('./routes/courses');
 const authRouter = require('./routes/auth');
 const universityRouter = require('./routes/university');
+
 require('dotenv').config();
 
 const app = express();
 
-// 미들웨어 설정
 app.use(cors({
-  origin: '*', // 실제 배포 시에는 특정 도메인으로 제한하세요
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 
-// API 라우트 설정
-app.use('/api', graduationRouter);  // graduation 라우터 연결
-app.use('/api', portfolioRouter);  // portfolio 라우터 연결
-app.use('/api', resumeRouter);      // resume 라우터 연결
-app.use('/api', userRouter);        // user 라우터 연결
-app.use('/api', universityRouter);
-app.use('/api/courses', courseRouter);
-app.use('/api/auth', authRouter);
-
-// JWT 검증 함수
 function verifyJwtSecret() {
   if (!process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET is not defined');
+    throw new Error('JWT_SECRET이 정의되지 않았습니다');
   }
   try {
     jwt.sign({ test: true }, process.env.JWT_SECRET);
@@ -47,106 +36,44 @@ function verifyJwtSecret() {
   }
 }
 
-// MongoDB 연결
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('MongoDB Connected'))
-  .catch(err => console.error('MongoDB Connection Error:', err));
-
-
-// 프로세스 종료 시 MongoDB 연결 종료
-process.on('SIGINT', async () => {
-  await mongoose.disconnect();
-  process.exit(0);
-});
-
-// MongoDB 연결 설정
-const uri = process.env.MONGODB_URI;
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  }
-});
-
-// 데이터베이스 연결 함수
-async function connectDB() {
+async function connectToMongoDB() {
   try {
-    await client.connect();
-    await client.db("admin").command({ ping: 1 });
-    console.log("MongoDB 연결 성공!");
-    return client.db("uniment"); // uniment 데이터베이스 사용
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    });
+    console.log('MongoDB 연결 성공');
   } catch (error) {
-    console.error("MongoDB 연결 실패:", error);
-    process.exit(1);
+    console.error('MongoDB 연결 실패:', error);
+    throw error;
   }
 }
 
-// API 라우트 설정
-async function setupRoutes() {
-  const db = await connectDB();
+function setupRoutes() {
+  app.use('/api', graduationRouter);
+  app.use('/api', portfolioRouter);
+  app.use('/api', resumeRouter);
+  app.use('/api', userRouter);
+  app.use('/api', universityRouter);
+  app.use('/api/courses', courseRouter);
+  app.use('/api/auth', authRouter);
 
-  // 라우터 연결 - 위치 이동
-  app.use('/api', graduationRouter);  // graduation 라우터 연결
-  app.use('/api', portfolioRouter);  // portfolio 라우터 연결
-  app.use('/api', resumeRouter);      // resume 라우터 연결
-  app.use('/api', userRouter);        // user 라우터 연결
-  app.use('/api/portfolio', portfolioRouter); // portfolio 라우터 연결
-
-  // 사용자 관련 API
-  app.post('/api/users', async (req, res) => {
-    try {
-      const collection = db.collection('users');
-      const result = await collection.insertOne(req.body);
-      res.status(201).json(result);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
-
-  // 학점 정보 관련 API
-  app.post('/api/credits', async (req, res) => {
-    try {
-      const collection = db.collection('credits');
-      const result = await collection.insertOne(req.body);
-      res.status(201).json(result);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
-
-  // 포트폴리오 관련 API
-  app.post('/api/portfolios', async (req, res) => {
-    try {
-      const collection = db.collection('portfolios');
-      const result = await collection.insertOne(req.body);
-      res.status(201).json(result);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
-
-  // 테스트용 API
   app.get('/test', (req, res) => {
     res.json({ message: '서버 연결 성공!' });
   });
 }
 
-// 서버 시작
-const PORT = process.env.PORT || 5555;
-
-// 서버 시작 함수
 async function startServer() {
   try {
     verifyJwtSecret();
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('MongoDB Connected');
+    await connectToMongoDB();
+    setupRoutes();
 
     const PORT = process.env.PORT || 5555;
     app.listen(PORT, () => {
       console.log(`서버가 포트 ${PORT}에서 실행중입니다.`);
       console.log('환경변수 설정 상태:');
-      console.log('- JWT_SECRET:', '설정됨');
+      console.log('- JWT_SECRET:', process.env.JWT_SECRET ? '설정됨' : '미설정');
       console.log('- MONGODB_URI:', process.env.MONGODB_URI ? '설정됨' : '미설정');
     });
   } catch (error) {
@@ -155,10 +82,15 @@ async function startServer() {
   }
 }
 
-startServer();
-
-// 프로세스 종료 시 DB 연결 종료
 process.on('SIGINT', async () => {
-  await mongoose.disconnect();
-  process.exit(0);
+  try {
+    await mongoose.disconnect();
+    console.log('MongoDB 연결 종료');
+    process.exit(0);
+  } catch (error) {
+    console.error('MongoDB 연결 종료 실패:', error);
+    process.exit(1);
+  }
 });
+
+startServer();
