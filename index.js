@@ -50,6 +50,7 @@ async function connectToMongoDB() {
 }
 
 function setupRoutes() {
+  app.use('/api/users', userRouter);  // userRouter만 이렇게 수정
   app.use('/api', graduationRouter);
   app.use('/api', portfolioRouter);
   app.use('/api', resumeRouter);
