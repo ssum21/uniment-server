@@ -2,22 +2,29 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String },
-  socialType: { 
-    type: String, 
-    enum: ['local', 'google', 'kakao', 'apple'],
+  name: String,
+  email: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  password: String,
+  socialType: {
+    type: String,
+    enum: ['google', 'kakao', 'local'],
     default: 'local'
   },
-  socialId: String,
-  schoolInfo: {
-    name: String,
+  academicInfo: {
+    university: String,
     major: String,
     admissionYear: Number
   },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
 });
+
 
 userSchema.pre('save', async function(next) {
   if (this.socialType !== 'local') return next();

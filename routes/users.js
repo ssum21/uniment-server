@@ -90,5 +90,55 @@ router.get('/:userId', async (req, res) => {
   }
 });
 
+// 사용자의 학교 정보 조회
+router.get('/:userId/academic-info', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) {
+      return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
+    }
+
+    if (!user.academicInfo) {
+      return res.status(404).json({ message: '등록된 학교 정보가 없습니다.' });
+    }
+
+    res.json({
+      academicInfo: user.academicInfo,
+      message: '학교 정보 조회 성공'
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 사용자의 학교 정보 업데이트
+router.put('/:userId/academic-info', async (req, res) => {
+  try {
+    const { university, major, admissionYear } = req.body;
+    
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.userId,
+      {
+        academicInfo: {
+          university,
+          major,
+          admissionYear
+        }
+      },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
+    }
+
+    res.json({
+      message: '학교 정보가 업데이트되었습니다.',
+      academicInfo: updatedUser.academicInfo
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 module.exports = router;
