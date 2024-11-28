@@ -11,6 +11,7 @@ const resumeRouter = require('./routes/resume');
 const userRouter = require('./routes/users');
 const courseRouter = require('./routes/courses');
 const authRouter = require('./routes/auth');
+const universityRouter = require('./routes/university');
 require('dotenv').config();
 
 const app = express();
@@ -33,6 +34,7 @@ app.use('/api/courses', courseRouter);
 app.use('/api/users', userRouter);
 app.use('/api/resume', resumeRouter);
 app.use('/api/auth', authRouter);
+app.use('/api', universityRouter);
 
 // MongoDB 연결
 mongoose.connect(process.env.MONGODB_URI)
