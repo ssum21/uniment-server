@@ -19,8 +19,6 @@ const userCourseSchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Course'
     },
-    semester: String,
-    grade: String,
     status: {
       type: String,
       enum: ['수강중', '수강완료', '재수강'],

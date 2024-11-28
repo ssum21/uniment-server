@@ -145,7 +145,7 @@ router.get('/available', async (req, res) => {
 // 사용자 수강 과목 추가 (기존 코드 수정)
 router.post('/user/add-course', async (req, res) => {
   try {
-    const { userId, courseId, semester } = req.body;
+    const { userId, courseId } = req.body;
     
     // ObjectId 유효성 검사
     if (!mongoose.Types.ObjectId.isValid(userId) || 
@@ -182,7 +182,6 @@ router.post('/user/add-course', async (req, res) => {
     // 과목 추가
     userCourse.courses.push({
       courseId: courseId,
-      semester: semester,
       status: '수강중'
     });
 
