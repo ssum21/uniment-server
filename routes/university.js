@@ -3,7 +3,7 @@ const router = express.Router();
 const University = require('../models/University');
 
 // 모든 대학 정보 조회
-router.get('/universities', async (req, res) => {
+router.get('/universities/names', async (req, res) => {
   try {
     const universities = await University.find({}, 'name');
     res.json(universities);
