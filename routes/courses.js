@@ -163,10 +163,14 @@ router.post('/user/add-course', async (req, res) => {
         return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
       }
 
+      // 기본값 설정
+      const university = user.academicInfo?.university || '미정';
+      const major = user.academicInfo?.major || '미정';
+
       userCourse = new UserCourse({
         userId: userId,
-        university: user.academicInfo.university,
-        major: user.academicInfo.major,
+        university: university,
+        major: major,
         courses: []
       });
     }
@@ -197,6 +201,7 @@ router.post('/user/add-course', async (req, res) => {
       course: populatedUserCourse.courses[populatedUserCourse.courses.length - 1]
     });
   } catch (error) {
+    console.error('Error details:', error);
     res.status(500).json({ message: error.message });
   }
 });
