@@ -34,7 +34,7 @@ app.use('/api/courses', courseRouter);
 app.use('/api/users', userRouter);
 app.use('/api/resume', resumeRouter);
 app.use('/api/auth', authRouter);
-app.use('/api/university', universityRouter);
+app.use('/api', universityRouter);  // university 라우터를 /api 경로에 연결
 
 // MongoDB 연결
 mongoose.connect(process.env.MONGODB_URI)
