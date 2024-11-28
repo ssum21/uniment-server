@@ -2,17 +2,10 @@
 const mongoose = require('mongoose');
 
 const courseSchema = new mongoose.Schema({
-  university: {
-    type: String,
-    required: true
-  },
-  major: {
-    type: String,
-    required: true
-  },
   courseCode: {
     type: String,
-    required: true
+    required: true,
+    unique: true
   },
   courseName: {
     type: String,
@@ -23,20 +16,24 @@ const courseSchema = new mongoose.Schema({
     required: true
   },
   courseType: {
-    mainCategory: {
-      type: String,
-      enum: ['전공', '교양'],
-      required: true
-    },
-    subCategory: {
-      type: String,
-      enum: ['필수', '선택'],
-      required: true
-    }
+    type: String,
+    required: true,
+    enum: ['전공필수', '전공선택', '교양필수', '교양선택']
   },
-  targetYear: Number,
-  professor: String,
-  description: String
+  language: {
+    type: String,
+    enum: ['한국어', '영어']
+  },
+  university: {
+    type: String,
+    required: true,
+    default: '경희대학교'
+  },
+  major: {
+    type: String,
+    required: true,
+    default: '컴퓨터공학과'
+  }
 });
 
 module.exports = mongoose.model('Course', courseSchema);

@@ -5,39 +5,25 @@ const Course = require('../models/Course');
 const UserCourse = require('../models/UserCourse');
 const mongoose = require('mongoose');
 
-// 전체 과목 조회
+// 전체 과목 목록 조회
 router.get('/all', async (req, res) => {
   try {
-    console.log('과목 조회 요청 받음');
-    const courses = await Course.find({})
-      .select('courseCode courseName targetYear capacity professor credits courseTime courseType language description')
-      .sort({ courseCode: 1 });  // 학수번호 기준 정렬
-    
-    console.log(`총 ${courses.length}개 과목 조회됨`);
+    const courses = await Course.find()
+      .select('courseCode courseName credits courseType language')
+      .sort('courseCode');
     res.json(courses);
   } catch (error) {
-    console.error('과목 조회 중 에러:', error);
     res.status(500).json({ message: error.message });
   }
 });
 
-// 과목 검색
+// 과목 검색 (과목명으로)
 router.get('/search', async (req, res) => {
   try {
-    const { keyword, type } = req.query;
-    
-    const query = {};
-    if (keyword) {
-      query.$or = [
-        { courseName: { $regex: keyword, $options: 'i' } },
-        { courseCode: { $regex: keyword, $options: 'i' } }
-      ];
-    }
-    if (type) {
-      query.courseType = type;
-    }
-    
-    const courses = await Course.find(query);
+    const { keyword } = req.query;
+    const courses = await Course.find({
+      courseName: { $regex: keyword, $options: 'i' }
+    }).select('courseCode courseName credits courseType language');
     res.json(courses);
   } catch (error) {
     res.status(500).json({ message: error.message });
