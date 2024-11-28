@@ -29,12 +29,23 @@ app.use('/api', graduationRouter);  // graduation 라우터 연결
 app.use('/api', portfolioRouter);  // portfolio 라우터 연결
 app.use('/api', resumeRouter);      // resume 라우터 연결
 app.use('/api', userRouter);        // user 라우터 연결
-app.use('/api/portfolio', portfolioRouter); // portfolio 라우터 연결
-app.use('/api/courses', courseRouter);
-app.use('/api/users', userRouter);
-app.use('/api/resume', resumeRouter);
-app.use('/api/auth', authRouter);
 app.use('/api', universityRouter);
+app.use('/api/courses', courseRouter);
+app.use('/api/auth', authRouter);
+
+// JWT 검증 함수
+function verifyJwtSecret() {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not defined');
+  }
+  try {
+    jwt.sign({ test: true }, process.env.JWT_SECRET);
+    console.log('JWT_SECRET 검증 성공');
+  } catch (error) {
+    console.error('JWT_SECRET 검증 실패:', error);
+    throw error;
+  }
+}
 
 // MongoDB 연결
 mongoose.connect(process.env.MONGODB_URI)
@@ -124,30 +135,14 @@ async function setupRoutes() {
 // 서버 시작
 const PORT = process.env.PORT || 5555;
 
-// JWT 검증 함수
-function verifyJwtSecret() {
-  if (!process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET is not defined');
-  }
-  try {
-    // 테스트 토큰 생성
-    jwt.sign({ test: true }, process.env.JWT_SECRET);
-    console.log('JWT_SECRET 검증 성공');
-  } catch (error) {
-    console.error('JWT_SECRET 검증 실패:', error);
-    throw error;
-  }
-}
-
-// 서버 시작 함수 수정
+// 서버 시작 함수
 async function startServer() {
   try {
-    // JWT 환경변수 검증
     verifyJwtSecret();
-    
-    // MongoDB 연결
-    await connectDB();
-    
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('MongoDB Connected');
+
+    const PORT = process.env.PORT || 5555;
     app.listen(PORT, () => {
       console.log(`서버가 포트 ${PORT}에서 실행중입니다.`);
       console.log('환경변수 설정 상태:');
@@ -160,11 +155,10 @@ async function startServer() {
   }
 }
 
-// 서버 시작
 startServer();
 
 // 프로세스 종료 시 DB 연결 종료
 process.on('SIGINT', async () => {
-  await client.close();
+  await mongoose.disconnect();
   process.exit(0);
 });
