@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const Course = require('../models/Course');
 const UserCourse = require('../models/UserCourse');
+const User = require('../models/User');
 const mongoose = require('mongoose');
 
 // 전체 과목 목록 조회
