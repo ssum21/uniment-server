@@ -136,4 +136,83 @@ router.get('/user/:userId', async (req, res) => {
   }
 });
 
+// 특정 대학/학과의 수강 가능한 과목 목록 조회 (기존 코드 수정)
+router.get('/available', async (req, res) => {
+  try {
+    const { university, major } = req.query;
+    if (!university || !major) {
+      return res.status(400).json({ message: '대학과 학과 정보가 필요합니다.' });
+    }
+
+    const courses = await Course.find({
+      university: university,
+      major: major,
+      isAvailable: true
+    }).select('courseCode courseName credits professor courseTime courseType');
+
+    res.json(courses);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 사용자 수강 과목 추가 (기존 코드 수정)
+router.post('/user/add-course', async (req, res) => {
+  try {
+    const { userId, courseId, semester } = req.body;
+    
+    // ObjectId 유효성 검사
+    if (!mongoose.Types.ObjectId.isValid(userId) || 
+        !mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({ message: '유효하지 않은 ID 형식입니다.' });
+    }
+
+    let userCourse = await UserCourse.findOne({ userId: userId });
+    
+    if (!userCourse) {
+      // 새로운 UserCourse 문서 생성
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
+      }
+
+      userCourse = new UserCourse({
+        userId: userId,
+        university: user.academicInfo.university,
+        major: user.academicInfo.major,
+        courses: []
+      });
+    }
+
+    // 이미 추가된 과목인지 확인
+    const isDuplicate = userCourse.courses.some(
+      course => course.courseId.toString() === courseId
+    );
+
+    if (isDuplicate) {
+      return res.status(400).json({ message: '이미 추가된 과목입니다.' });
+    }
+
+    // 과목 추가
+    userCourse.courses.push({
+      courseId: courseId,
+      semester: semester,
+      status: '수강중'
+    });
+
+    await userCourse.save();
+    
+    // 추가된 과목 정보와 함께 응답
+    const populatedUserCourse = await UserCourse.findById(userCourse._id)
+      .populate('courses.courseId');
+    
+    res.status(201).json({
+      message: '과목이 추가되었습니다.',
+      course: populatedUserCourse.courses[populatedUserCourse.courses.length - 1]
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;
