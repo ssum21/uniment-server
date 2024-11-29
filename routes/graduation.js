@@ -3,98 +3,119 @@ const express = require('express');
 const router = express.Router();
 const Credit = require('../models/Credit');
 const mongoose = require('mongoose'); // 추가
+const User = require('../models/User');
+const UserCourse = require('../models/UserCourse');
+const GraduationRequirement = require('../models/GraduationRequirement');
 
 router.get('/graduation-status', async (req, res) => {
   try {
     const { userId } = req.query;
     
-    // userId 유효성 검사 추가
     if (!userId) {
       return res.status(400).json({ message: "userId가 필요합니다." });
     }
 
-    // 임시 테스트용 응답 추가 (데이터베이스에 데이터가 없을 때 사용)
-    const testData = {
-      totalCredits: {
-        required: 130,
-        current: 67,
-        remaining: 63
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
+    }
+
+    // 해당 학교/학과의 졸업요건 조회
+    const requirement = await GraduationRequirement.findOne({
+      university: user.academicInfo.university,
+      major: user.academicInfo.major
+    });
+
+    // 사용자의 이수 과목 조회
+    const userCourses = await UserCourse.findOne({ userId })
+      .populate('courses.courseId');
+
+    // 각 카테고리별 이수 학점 계산
+    const credits = {
+      major: {
+        basic: 0,
+        required: 0,
+        elective: 0
       },
-      majorCredits: {
-        required: 66,
-        current: 45,
-        remaining: 21
-      },
-      generalCredits: {
-        required: 64,
-        current: 22,
-        remaining: 42
-      },
-      status: {
-        overall: "진행중",
-        percentage: 51.5
+      general: {
+        required: 0,
+        distributed: 0,
+        free: 0
       }
     };
 
-    // 실제 데이터베이스 조회 시도
-    let credits;
-    try {
-      if (mongoose.Types.ObjectId.isValid(userId)) {
-        // ObjectId인 경우
-        credits = await Credit.find({ userId: new mongoose.Types.ObjectId(userId) });
-      } else {
-        // 문자열 ID인 경우
-        credits = await Credit.find({ userId: userId });
-      }
-    } catch (dbError) {
-      console.log("데이터베이스 조회 실패:", dbError);
-      // 개발 단계에서는 테스트 데이터 반환
-      return res.json(testData);
-    }
-
-    // 데이터가 없으면 테스트 데이터 반환
-    if (!credits || credits.length === 0) {
-      return res.json(testData);
-    }
-
-    const graduationStatus = {
-      totalCredits: { required: 0, current: 0, remaining: 0 },
-      majorCredits: { required: 0, current: 0, remaining: 0 },
-      generalCredits: { required: 0, current: 0, remaining: 0 }
-    };
-
-    credits.forEach(credit => {
-      switch(credit.category) {
-        case '전체':
-          graduationStatus.totalCredits.required += credit.credits.required;
-          graduationStatus.totalCredits.current += credit.credits.current;
-          break;
-        case '전공':
-          graduationStatus.majorCredits.required += credit.credits.required;
-          graduationStatus.majorCredits.current += credit.credits.current;
-          break;
-        case '교양':
-          graduationStatus.generalCredits.required += credit.credits.required;
-          graduationStatus.generalCredits.current += credit.credits.current;
-          break;
+    userCourses?.courses.forEach(course => {
+      if (course.status === '수강완료') {
+        const courseType = course.courseId.courseType;
+        switch(courseType.mainCategory) {
+          case '전공기초':
+            credits.major.basic += course.courseId.credits;
+            break;
+          case '전공필수':
+            credits.major.required += course.courseId.credits;
+            break;
+          case '전공선택':
+            credits.major.elective += course.courseId.credits;
+            break;
+          case '필수교양':
+            credits.general.required += course.courseId.credits;
+            break;
+          case '배분이수':
+            credits.general.distributed += course.courseId.credits;
+            break;
+          case '자유이수':
+            credits.general.free += course.courseId.credits;
+            break;
+        }
       }
     });
 
-    // remaining 값 계산
-    for (let key in graduationStatus) {
-      graduationStatus[key].remaining = 
-        graduationStatus[key].required - graduationStatus[key].current;
-    }
-
-    // 전체 진행률 계산
-    const totalPercentage = 
-      (graduationStatus.totalCredits.current / graduationStatus.totalCredits.required) * 100;
+    const totalEarned = Object.values(credits.major).reduce((a, b) => a + b, 0) +
+                       Object.values(credits.general).reduce((a, b) => a + b, 0);
 
     res.json({
-      ...graduationStatus,
+      totalCredits: {
+        required: requirement.totalCredits,
+        current: totalEarned,
+        remaining: requirement.totalCredits - totalEarned
+      },
+      major: {
+        basic: {
+          required: requirement.majorRequirements.basic,
+          current: credits.major.basic,
+          remaining: requirement.majorRequirements.basic - credits.major.basic
+        },
+        required: {
+          required: requirement.majorRequirements.required,
+          current: credits.major.required,
+          remaining: requirement.majorRequirements.required - credits.major.required
+        },
+        elective: {
+          required: requirement.majorRequirements.elective,
+          current: credits.major.elective,
+          remaining: requirement.majorRequirements.elective - credits.major.elective
+        }
+      },
+      general: {
+        required: {
+          required: requirement.generalRequirements.required,
+          current: credits.general.required,
+          remaining: requirement.generalRequirements.required - credits.general.required
+        },
+        distributed: {
+          required: requirement.generalRequirements.distributed,
+          current: credits.general.distributed,
+          remaining: requirement.generalRequirements.distributed - credits.general.distributed
+        },
+        free: {
+          required: requirement.generalRequirements.free,
+          current: credits.general.free,
+          remaining: requirement.generalRequirements.free - credits.general.free
+        }
+      },
       status: {
-        overall: totalPercentage >= 100 ? '완료' : '진행중',
-        percentage: Math.round(totalPercentage * 10) / 10
+        overall: totalEarned >= requirement.totalCredits ? '완료' : '진행중',
+        percentage: Math.round((totalEarned / requirement.totalCredits) * 100 * 10) / 10
       }
     });
 
