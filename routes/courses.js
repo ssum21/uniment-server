@@ -569,52 +569,43 @@ router.delete('/courses/:courseId', async (req, res) => {
 // 사용자 과목 추가 API
 router.post('/user/add-course', async (req, res) => {
   try {
-    const { userId, courseId } = req.body;
+    const { userId, courseId, status = '수강완료' } = req.body;
 
-    // 과목 정보 조회
+    // 사용자 확인
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
+    }
+
+    // 과목 정보 확인
     const course = await Course.findById(courseId);
     if (!course) {
       return res.status(404).json({ message: '과목을 찾을 수 없습니다.' });
     }
 
-    // 사용자의 과목 목록 조회 또는 생성
+    // UserCourse 문서 찾기 또는 생성
     let userCourse = await UserCourse.findOne({ userId });
     if (!userCourse) {
-      userCourse = new UserCourse({
-        userId,
-        courses: []
-      });
+      userCourse = new UserCourse({ userId, courses: [] });
     }
 
     // 이미 추가된 과목인지 확인
-    const isDuplicate = userCourse.courses.some(
-      c => c.courseId.toString() === courseId
+    const existingCourse = userCourse.courses.find(c => 
+      c.courseId.toString() === courseId
     );
-    
-    if (isDuplicate) {
+
+    if (existingCourse) {
       return res.status(400).json({ message: '이미 추가된 과목입니다.' });
     }
 
     // 과목 추가
-    userCourse.courses.push({
-      courseId,
-      status: '수강중',
-      grade: null
-    });
-
+    userCourse.courses.push({ courseId, status });
     await userCourse.save();
 
-    // 학점 업데이트
+    // 학점 업데이트 호출 추가
     await updateCredits(userId, course);
 
-    // 졸업 요건 업데이트
-    await updateGraduationStatus(userId, course, 'add');
-
-    res.status(201).json({
-      message: '과목이 추가되었습니다.',
-      course: course
-    });
-
+    res.status(201).json(userCourse);
   } catch (error) {
     console.error('과목 추가 중 오류:', error);
     res.status(500).json({ message: error.message });
