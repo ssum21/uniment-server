@@ -4,6 +4,7 @@ const router = express.Router();
 const Credit = require('../models/Credit');
 const User = require('../models/User');
 const mongoose = require('mongoose');
+const GraduationRequirement = require('../models/GraduationRequirement');
 
 // 학점 정보 조회 (userId를 파라미터로 받도록 수정)
 router.get('/:userId', async (req, res) => {
@@ -150,10 +151,20 @@ router.post('/initialize', async (req, res) => {
       });
     }
 
-    // 대학/학과별 졸업 요건 조회
+    // 사용자 정보 조회로 입학년도 확인
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        message: "사용자를 찾을 수 없습니다." 
+      });
+    }
+
+    // 해당 학과의 졸업 요건 조회 (입학년도 기준)
     const requirement = await GraduationRequirement.findOne({
       university,
-      major
+      major,
+      'admissionYearRange.start': { $lte: user.academicInfo.admissionYear },
+      'admissionYearRange.end': { $gte: user.academicInfo.admissionYear }
     });
 
     if (!requirement) {
@@ -169,9 +180,9 @@ router.post('/initialize', async (req, res) => {
         category: '전체',
         subCategory: '필수',
         credits: {
-          required: requirement.totalCredits || 140, // 기본값 140
+          required: requirement.totalCredits,
           current: 0,
-          remaining: requirement.totalCredits || 140
+          remaining: requirement.totalCredits
         }
       },
       {
@@ -179,9 +190,13 @@ router.post('/initialize', async (req, res) => {
         category: '전공',
         subCategory: '필수',
         credits: {
-          required: requirement.majorRequirements.required || 70,
+          required: requirement.majorRequirements.required + 
+                   requirement.majorRequirements.basic + 
+                   requirement.majorRequirements.elective,
           current: 0,
-          remaining: requirement.majorRequirements.required || 70
+          remaining: requirement.majorRequirements.required + 
+                    requirement.majorRequirements.basic + 
+                    requirement.majorRequirements.elective
         }
       },
       {
@@ -189,24 +204,17 @@ router.post('/initialize', async (req, res) => {
         category: '교양',
         subCategory: '필수',
         credits: {
-          required: requirement.generalRequirements.required || 50,
+          required: requirement.generalRequirements.required + 
+                   requirement.generalRequirements.distributed + 
+                   requirement.generalRequirements.free,
           current: 0,
-          remaining: requirement.generalRequirements.required || 50
-        }
-      },
-      {
-        userId,
-        category: '기타',
-        subCategory: '선택',
-        credits: {
-          required: 20, // 기본값
-          current: 0,
-          remaining: 20
+          remaining: requirement.generalRequirements.required + 
+                    requirement.generalRequirements.distributed + 
+                    requirement.generalRequirements.free
         }
       }
     ];
 
-    // 학점 정보 일괄 생성
     await Credit.insertMany(credits);
 
     res.status(201).json({
