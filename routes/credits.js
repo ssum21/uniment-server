@@ -309,4 +309,85 @@ router.get('/:userId/detailed', async (req, res) => {
   }
 });
 
+// 수동 학점 업데이트 API
+router.post('/:userId/manual-update', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { courseType, credits } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ 
+        message: "유효하지 않은 userId 형식입니다."
+      });
+    }
+
+    // 과목 타입에 따른 카테고리 결정
+    let category, subCategory;
+    switch(courseType) {
+      case '전공기초':
+        category = '전공';
+        subCategory = '기초';
+        break;
+      case '전공필수':
+        category = '전공';
+        subCategory = '필수';
+        break;
+      case '전공선택':
+        category = '전공';
+        subCategory = '선택';
+        break;
+      case '교양필수':
+        category = '교양';
+        subCategory = '필수';
+        break;
+      case '배분이수':
+        category = '교양';
+        subCategory = '배분';
+        break;
+      case '자유이수':
+        category = '교양';
+        subCategory = '자유';
+        break;
+    }
+
+    // 해당 카테고리 학점 업데이트
+    let creditDoc = await Credit.findOne({
+      userId,
+      category,
+      subCategory
+    });
+
+    if (creditDoc) {
+      creditDoc.credits.current += credits;
+      creditDoc.credits.remaining = creditDoc.credits.required - creditDoc.credits.current;
+      await creditDoc.save();
+    }
+
+    // 전체 학점도 업데이트
+    let totalCredit = await Credit.findOne({
+      userId,
+      category: '전체',
+      subCategory: '필수'
+    });
+
+    if (totalCredit) {
+      totalCredit.credits.current += credits;
+      totalCredit.credits.remaining = totalCredit.credits.required - totalCredit.credits.current;
+      await totalCredit.save();
+    }
+
+    res.json({ 
+      message: '학점이 성공적으로 업데이트되었습니다.',
+      updatedCredits: {
+        category: creditDoc,
+        total: totalCredit
+      }
+    });
+
+  } catch (error) {
+    console.error('수동 학점 업데이트 중 오류:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;
