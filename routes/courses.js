@@ -319,4 +319,62 @@ router.get('/list/user/:userId', async (req, res) => {
   }
 });
 
+// 사용자가 추가한 과목 삭제 API
+router.delete('/list/user/:userId/:courseId', async (req, res) => {
+  try {
+    const { userId, courseId } = req.params;
+    
+    // ObjectId 유효성 검사
+    if (!mongoose.Types.ObjectId.isValid(userId) || 
+        !mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({ message: '유효하지 않은 ID 형식입니다.' });
+    }
+
+    const userCourse = await UserCourse.findOne({ userId });
+    if (!userCourse) {
+      return res.status(404).json({ message: '수강 정보를 찾을 수 없습니다.' });
+    }
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: '과목을 찾을 수 없습니다.' });
+    }
+
+    // 과목 삭제
+    userCourse.courses = userCourse.courses.filter(
+      course => course.courseId.toString() !== courseId
+    );
+
+    await userCourse.save();
+    
+    // 졸업 요건 업데이트
+    await updateGraduationStatus(userId, course, 'remove');
+
+    // 업데이트된 과목 목록 반환
+    const updatedUserCourse = await UserCourse.findOne({ userId: userId })
+      .populate({
+        path: 'courses.courseId',
+        select: 'courseCode courseName credits courseType language major'
+      });
+
+    const formattedCourses = updatedUserCourse.courses.map(course => ({
+      _id: course.courseId._id,
+      courseCode: course.courseId.courseCode,
+      courseName: course.courseId.courseName,
+      credits: course.courseId.credits,
+      courseType: course.courseId.courseType,
+      language: course.courseId.language,
+      major: course.courseId.major
+    }));
+
+    res.json({
+      message: '과목이 성공적으로 삭제되었습니다.',
+      updatedCourses: formattedCourses
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;
