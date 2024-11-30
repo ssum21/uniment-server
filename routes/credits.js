@@ -5,11 +5,20 @@ const Credit = require('../models/Credit');
 const User = require('../models/User');
 const GraduationRequirement = require('../models/GraduationRequirement');
 const UserCourse = require('../models/UserCourse');
+const mongoose = require('mongoose');
 
 // 학점 정보 조회
 router.get('/credits', async (req, res) => {
   try {
     const { userId } = req.query;
+    
+    // ObjectId 유효성 검사 추가
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ 
+        message: "유효하지 않은 userId 형식입니다."
+      });
+    }
+
     const credits = await Credit.find({ userId });
     
     // 카테고리별로 데이터 정리
@@ -30,7 +39,11 @@ router.get('/credits', async (req, res) => {
 
     res.json(organizedCredits);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('학점 조회 중 오류:', error);
+    res.status(500).json({ 
+      message: "학점 정보 조회 중 오류가 발생했습니다.",
+      error: error.message 
+    });
   }
 });
 
