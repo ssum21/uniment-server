@@ -74,4 +74,23 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+// 자기소개서 삭제
+router.delete('/:id', async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: '유효하지 않은 ID 형식입니다.' });
+    }
+
+    const resume = await Resume.findById(req.params.id);
+    if (!resume) {
+      return res.status(404).json({ message: '자기소개서를 찾을 수 없습니다.' });
+    }
+
+    await Resume.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: '자기소개서가 삭제되었습니다.' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router; 
