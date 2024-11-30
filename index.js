@@ -29,6 +29,7 @@ app.use('/api', graduationRouter);  // graduation 라우터 연결
 app.use('/api', portfolioRouter);  // portfolio 라우터 연결
 app.use('/api', resumeRouter);      // resume 라우터 연결
 app.use('/api', userRouter);        // user 라우터 연결
+app.use('/api/graduation', graduationRouter);
 app.use('/api/portfolio', portfolioRouter); // portfolio 라우터 연결
 app.use('/api/courses', courseRouter);
 app.use('/api/users', userRouter);
