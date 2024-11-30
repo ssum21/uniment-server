@@ -132,4 +132,91 @@ router.get('/credits/summary', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+// 초기 학점 설정 API 추가
+router.post('/initialize', async (req, res) => {
+  try {
+    const { userId, university, major } = req.body;
+    
+    // 이미 초기화된 학점 정보가 있는지 확인
+    const existingCredits = await Credit.findOne({ 
+      userId, 
+      category: '전체' 
+    });
+    
+    if (existingCredits) {
+      return res.status(400).json({ 
+        message: "이미 학점 정보가 초기화되어 있습니다." 
+      });
+    }
+
+    // 대학/학과별 졸업 요건 조회
+    const requirement = await GraduationRequirement.findOne({
+      university,
+      major
+    });
+
+    if (!requirement) {
+      return res.status(404).json({ 
+        message: "해당 학과의 졸업 요건을 찾을 수 없습니다." 
+      });
+    }
+
+    // 기본 학점 정보 생성
+    const credits = [
+      {
+        userId,
+        category: '전체',
+        subCategory: '필수',
+        credits: {
+          required: requirement.totalCredits || 140, // 기본값 140
+          current: 0,
+          remaining: requirement.totalCredits || 140
+        }
+      },
+      {
+        userId,
+        category: '전공',
+        subCategory: '필수',
+        credits: {
+          required: requirement.majorRequirements.required || 70,
+          current: 0,
+          remaining: requirement.majorRequirements.required || 70
+        }
+      },
+      {
+        userId,
+        category: '교양',
+        subCategory: '필수',
+        credits: {
+          required: requirement.generalRequirements.required || 50,
+          current: 0,
+          remaining: requirement.generalRequirements.required || 50
+        }
+      },
+      {
+        userId,
+        category: '기타',
+        subCategory: '선택',
+        credits: {
+          required: 20, // 기본값
+          current: 0,
+          remaining: 20
+        }
+      }
+    ];
+
+    // 학점 정보 일괄 생성
+    await Credit.insertMany(credits);
+
+    res.status(201).json({
+      message: "학점 정보가 초기화되었습니다.",
+      credits
+    });
+  } catch (error) {
+    console.error('학점 초기화 중 오류:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;
