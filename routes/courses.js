@@ -195,12 +195,9 @@ router.post('/user/add-course', async (req, res) => {
       courseId: courseId,
       status: '수강중'
     });
-
+    
     await userCourse.save();
-    
-    // 추업 요건 업데이트
-    await updateGraduationStatus(userId, course, 'add');
-    
+
     // 추가된 과목 정보와 함께 응답
     const populatedUserCourse = await UserCourse.findById(userCourse._id)
       .populate('courses.courseId');
@@ -209,6 +206,7 @@ router.post('/user/add-course', async (req, res) => {
       message: '과목이 추가되었습니다.',
       course: populatedUserCourse.courses[populatedUserCourse.courses.length - 1]
     });
+
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ message: error.message });
