@@ -307,7 +307,7 @@ router.get('/list/user/:userId', async (req, res) => {
       courseCode: course.courseId.courseCode,
       courseName: course.courseId.courseName,
       credits: course.courseId.credits,
-      courseType: course.courseId.courseType.mainCategory,
+      courseType: course.courseId.courseType,
       language: course.courseId.language,
       major: course.courseId.major
     }));
