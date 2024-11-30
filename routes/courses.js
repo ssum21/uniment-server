@@ -288,4 +288,35 @@ router.delete('/user/remove-course', async (req, res) => {
   }
 });
 
+// 사용자가 추가한 과목 목록 조회 (간단한 형식)
+router.get('/list/user/:userId', async (req, res) => {
+  try {
+    const userCourses = await UserCourse.findOne({ userId: req.params.userId })
+      .populate({
+        path: 'courses.courseId',
+        select: 'courseCode courseName credits courseType language major'
+      });
+
+    if (!userCourses || !userCourses.courses) {
+      return res.json([]);
+    }
+
+    // 필요한 형식으로 데이터 변환
+    const formattedCourses = userCourses.courses.map(course => ({
+      _id: course.courseId._id,
+      courseCode: course.courseId.courseCode,
+      courseName: course.courseId.courseName,
+      credits: course.courseId.credits,
+      courseType: course.courseId.courseType.mainCategory,
+      language: course.courseId.language,
+      major: course.courseId.major
+    }));
+
+    res.json(formattedCourses);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;
