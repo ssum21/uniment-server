@@ -6,6 +6,7 @@ const UserCourse = require('../models/UserCourse');
 const User = require('../models/User');
 const mongoose = require('mongoose');
 const { updateGraduationStatus } = require('../utils/graduationHelper');
+const Credit = require('../models/Credit');
 
 // 전체 과목 목록 조회
 router.get('/all', async (req, res) => {
@@ -68,10 +69,19 @@ router.post('/courses', async (req, res) => {
     });
 
     const savedCourse = await course.save();
+    
+    // 학점 업데이트 로직 추가
+    await updateCredits(req.body.userId, savedCourse);
+    
+    // 졸업요건 업데이트 (기존 로직)
     await updateGraduationRequirements(req.body.userId, savedCourse);
     
-    res.status(201).json(savedCourse);
+    res.status(201).json({
+      course: savedCourse,
+      message: '과목이 추가되고 학점이 업데이트되었습니다.'
+    });
   } catch (error) {
+    console.error('과목 추가 중 오류:', error);
     res.status(400).json({ message: error.message });
   }
 });
@@ -378,6 +388,112 @@ router.delete('/list/user/:userId/:courseId', async (req, res) => {
 
   } catch (error) {
     console.error('Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 과목 추가 시 학점 업데이트 함수
+async function updateCredits(userId, course) {
+  try {
+    // 과목의 타입과 학점 정보 추출
+    const { mainCategory, subCategory } = course.courseType;
+    const courseCredit = course.credit;
+
+    // 해당 카테고리의 현재 학점 정보 조회
+    const credit = await Credit.findOne({
+      userId,
+      category: mainCategory,
+      subCategory: subCategory
+    });
+
+    if (credit) {
+      // 현재 학점에 새로운 과목의 학점을 추가
+      const updatedCredit = await Credit.findOneAndUpdate(
+        { userId, category: mainCategory, subCategory: subCategory },
+        {
+          $inc: {
+            'credits.current': courseCredit
+          }
+        },
+        { new: true }
+      );
+
+      // '전체' 카테고리도 함께 업데이트
+      await Credit.findOneAndUpdate(
+        { userId, category: '전체', subCategory: '필수' },
+        {
+          $inc: {
+            'credits.current': courseCredit
+          }
+        },
+        { new: true }
+      );
+
+      return updatedCredit;
+    }
+
+    // 해당 카테고리의 학점 정보가 없는 경우 새로 생성
+    return await Credit.create({
+      userId,
+      category: mainCategory,
+      subCategory: subCategory,
+      credits: {
+        required: courseCredit, // 초기값 설정
+        current: courseCredit,
+        remaining: 0
+      }
+    });
+  } catch (error) {
+    console.error('학점 업데이트 중 오류:', error);
+    throw error;
+  }
+}
+
+// 과목 삭제 시 학점 차감 함수
+async function decreaseCredits(userId, course) {
+  try {
+    const { mainCategory, subCategory } = course.courseType;
+    const courseCredit = course.credit;
+
+    // 해당 카테고리의 학점 차감
+    await Credit.findOneAndUpdate(
+      { userId, category: mainCategory, subCategory: subCategory },
+      {
+        $inc: {
+          'credits.current': -courseCredit
+        }
+      }
+    );
+
+    // '전체' 카테고리 학점 차감
+    await Credit.findOneAndUpdate(
+      { userId, category: '전체', subCategory: '필수' },
+      {
+        $inc: {
+          'credits.current': -courseCredit
+        }
+      }
+    );
+  } catch (error) {
+    console.error('학점 차감 중 오류:', error);
+    throw error;
+  }
+}
+
+// 과목 삭제 API에 학점 차감 로직 추가
+router.delete('/courses/:courseId', async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.courseId);
+    if (!course) {
+      return res.status(404).json({ message: '과목을 찾을 수 없습니다.' });
+    }
+
+    // 학점 차감
+    await decreaseCredits(req.body.userId, course);
+    
+    await Course.findByIdAndDelete(req.params.courseId);
+    res.json({ message: '과목이 삭제되고 학점이 업데이트되었습니다.' });
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
