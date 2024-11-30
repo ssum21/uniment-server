@@ -7,6 +7,7 @@ const User = require('../models/User');
 const mongoose = require('mongoose');
 const { updateGraduationStatus } = require('../utils/graduationHelper');
 const Credit = require('../models/Credit');
+const GraduationRequirement = require('../models/GraduationRequirement');
 
 // 전체 과목 목록 조회
 router.get('/all', async (req, res) => {
@@ -123,7 +124,7 @@ router.post('/user/register', async (req, res) => {
   }
 });
 
-// 사용자의 수강 과목 ���회
+// 사용자의 수강 과목 회
 router.get('/user/:userId', async (req, res) => {
   try {
     const userCourses = await UserCourse.find({ userId: req.params.userId })
@@ -392,61 +393,128 @@ router.delete('/list/user/:userId/:courseId', async (req, res) => {
   }
 });
 
-// 과목 추가 시 학점 업데이트 함수
+// 과목 추가 시 학점 업데이트 함수 수정
 async function updateCredits(userId, course) {
   try {
-    // 과목의 타입과 학점 정보 추출
-    const { mainCategory, subCategory } = course.courseType;
-    const courseCredit = course.credit;
-
-    // 해당 카테고리의 현재 학점 정보 조회
-    const credit = await Credit.findOne({
-      userId,
-      category: mainCategory,
-      subCategory: subCategory
-    });
-
-    if (credit) {
-      // 현재 학점에 새로운 과목의 학점을 추가
-      const updatedCredit = await Credit.findOneAndUpdate(
-        { userId, category: mainCategory, subCategory: subCategory },
-        {
-          $inc: {
-            'credits.current': courseCredit
-          }
-        },
-        { new: true }
-      );
-
-      // '전체' 카테고리도 함께 업데이트
-      await Credit.findOneAndUpdate(
-        { userId, category: '전체', subCategory: '필수' },
-        {
-          $inc: {
-            'credits.current': courseCredit
-          }
-        },
-        { new: true }
-      );
-
-      return updatedCredit;
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error('사용자를 찾을 수 없습니다.');
     }
 
-    // 해당 카테고리의 학점 정보가 없는 경우 새로 생성
-    return await Credit.create({
-      userId,
-      category: mainCategory,
-      subCategory: subCategory,
-      credits: {
-        required: courseCredit, // 초기값 설정
-        current: courseCredit,
-        remaining: 0
-      }
+    // 졸업요건 조회
+    const requirement = await GraduationRequirement.findOne({
+      university: user.academicInfo.university,
+      major: user.academicInfo.major,
+      'admissionYearRange.start': { $lte: user.academicInfo.admissionYear },
+      'admissionYearRange.end': { $gte: user.academicInfo.admissionYear }
     });
+
+    if (!requirement) {
+      throw new Error('졸업요건 정보를 찾을 수 없습니다.');
+    }
+
+    // 과목 타입에 따른 카테고리 결정
+    let category, subCategory;
+    switch(course.courseType) {
+      case '전공기초':
+        category = '전공';
+        subCategory = '기초';
+        break;
+      case '전공필수':
+        category = '전공';
+        subCategory = '필수';
+        break;
+      case '전공선택':
+        category = '전공';
+        subCategory = '선택';
+        break;
+      case '교양필수':
+        category = '교양';
+        subCategory = '필수';
+        break;
+      case '배분이수':
+        category = '교양';
+        subCategory = '배분';
+        break;
+      case '자유이수':
+        category = '교양';
+        subCategory = '자유';
+        break;
+    }
+
+    // 해당 카테고리의 학점 정보 업데이트 또는 생성
+    let creditDoc = await Credit.findOne({
+      userId,
+      category,
+      subCategory
+    });
+
+    if (creditDoc) {
+      creditDoc.credits.current += course.credits;
+      creditDoc.credits.remaining = creditDoc.credits.required - creditDoc.credits.current;
+      await creditDoc.save();
+    } else {
+      // 새로운 카테고리 생성
+      const requiredCredits = getRequiredCredits(requirement, category, subCategory);
+      creditDoc = await Credit.create({
+        userId,
+        category,
+        subCategory,
+        credits: {
+          required: requiredCredits,
+          current: course.credits,
+          remaining: requiredCredits - course.credits
+        }
+      });
+    }
+
+    // 전체 학점 업데이트
+    let totalCredit = await Credit.findOne({
+      userId,
+      category: '전체',
+      subCategory: '필수'
+    });
+
+    if (totalCredit) {
+      totalCredit.credits.current += course.credits;
+      totalCredit.credits.remaining = totalCredit.credits.required - totalCredit.credits.current;
+      await totalCredit.save();
+    } else {
+      await Credit.create({
+        userId,
+        category: '전체',
+        subCategory: '필수',
+        credits: {
+          required: requirement.totalCredits,
+          current: course.credits,
+          remaining: requirement.totalCredits - course.credits
+        }
+      });
+    }
+
+    return creditDoc;
   } catch (error) {
     console.error('학점 업데이트 중 오류:', error);
     throw error;
   }
+}
+
+// 졸업요건에서 필요 학점 가져오는 헬퍼 함수
+function getRequiredCredits(requirement, category, subCategory) {
+  if (category === '전공') {
+    switch(subCategory) {
+      case '기초': return requirement.majorRequirements.basic;
+      case '필수': return requirement.majorRequirements.required;
+      case '선택': return requirement.majorRequirements.elective;
+    }
+  } else if (category === '교양') {
+    switch(subCategory) {
+      case '필수': return requirement.generalRequirements.required;
+      case '배분': return requirement.generalRequirements.distributed;
+      case '자유': return requirement.generalRequirements.free;
+    }
+  }
+  return 0;
 }
 
 // 과목 삭제 시 학점 차감 함수
