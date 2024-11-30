@@ -12,9 +12,23 @@ router.post('/', async (req, res) => {
       console.log('Request body:', req.body);
 
       // 필수 필드 확인 및 유효성 검사
-      const { userId, type, title, date, description } = req.body;
-      if (!userId || !type || !title || !date) {
+      const { 
+        userId,
+        type,        // 포트폴리오 유형 (8가지 중 하나)
+        title,       // 포트폴리오 종류 (예: "TOEIC")
+        achievement, // 정량적 성과 (점수 또는 합격여부)
+        date,        // 취득/수행 날짜
+        memo         // 메모
+      } = req.body;
+
+      // 필수 필드 검증
+      if (!userId || !type || !title || !achievement || !date) {
         return res.status(400).json({ message: '필수 필드가 누락되었습니다.' });
+      }
+
+      // achievement 형식 검증
+      if (!['점수', '합격여부'].includes(achievement.type)) {
+        return res.status(400).json({ message: '잘못된 성과 유형입니다.' });
       }
 
       // userId가 MongoDB ObjectId 형식인지 확인
@@ -27,9 +41,9 @@ router.post('/', async (req, res) => {
         userId,
         type,
         title,
+        achievement,
         date,
-        description,
-        score: req.body.score // 선택적 필드
+        memo
       });
 
       // 생성된 객체 로깅

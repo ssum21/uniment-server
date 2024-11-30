@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 
 const portfolioSchema = new mongoose.Schema({
   userId: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
     required: true
   },
   type: {
@@ -16,17 +17,32 @@ const portfolioSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  score: {
-    type: Number,
-    required: function() {
-      return this.type === '어학성적';
+  achievement: {
+    type: {
+      type: String,
+      enum: ['점수', '합격여부'],
+      required: true
+    },
+    score: {
+      type: Number,
+      required: function() {
+        return this.achievement.type === '점수';
+      }
+    },
+    passed: {
+      type: Boolean,
+      required: function() {
+        return this.achievement.type === '합격여부';
+      }
     }
   },
   date: {
     type: Date,
     required: true
   },
-  description: String
+  memo: {
+    type: String
+  }
 }, {
   timestamps: true
 });
