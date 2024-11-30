@@ -7,7 +7,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');  // JWT 모듈 추가
 const graduationRouter = require('./routes/graduation'); 
 const portfolioRouter = require('./routes/portfolio');
-const resumeRouter = require('./routes/resume');
+const resumesRouter = require('./routes/resumes');  // 수정된 부분
 const userRouter = require('./routes/users');
 const courseRouter = require('./routes/courses');
 const authRouter = require('./routes/auth');
@@ -27,13 +27,13 @@ app.use(express.json());
 // API 라우트 설정
 app.use('/api', graduationRouter);  // graduation 라우터 연결
 app.use('/api', portfolioRouter);  // portfolio 라우터 연결
-app.use('/api', resumeRouter);      // resume 라우터 연결
+app.use('/api/resumes', resumesRouter);  // 수정된 부분
 app.use('/api', userRouter);        // user 라우터 연결
 app.use('/api/graduation', graduationRouter);
 app.use('/api/portfolio', portfolioRouter); // portfolio 라우터 연결
 app.use('/api/courses', courseRouter);
 app.use('/api/users', userRouter);
-app.use('/api/resume', resumeRouter);
+app.use('/api/resume', resumesRouter);
 app.use('/api/auth', authRouter);
 app.use('/api', universityRouter);  // university 라우터를 /api 경로에 연결
 
