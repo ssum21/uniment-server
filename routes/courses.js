@@ -5,6 +5,7 @@ const Course = require('../models/Course');
 const UserCourse = require('../models/UserCourse');
 const User = require('../models/User');
 const mongoose = require('mongoose');
+const { updateGraduationStatus } = require('../utils/graduationHelper');
 
 // 전체 과목 목록 조회
 router.get('/all', async (req, res) => {
@@ -155,7 +156,12 @@ router.post('/user/add-course', async (req, res) => {
     }
 
     let userCourse = await UserCourse.findOne({ userId: userId });
+    const course = await Course.findById(courseId);
     
+    if (!course) {
+      return res.status(404).json({ message: '과목을 찾을 수 없습니다.' });
+    }
+
     if (!userCourse) {
       // 새로운 UserCourse 문서 생성
       const user = await User.findById(userId);
@@ -192,6 +198,9 @@ router.post('/user/add-course', async (req, res) => {
 
     await userCourse.save();
     
+    // 추업 요건 업데이트
+    await updateGraduationStatus(userId, course, 'add');
+    
     // 추가된 과목 정보와 함께 응답
     const populatedUserCourse = await UserCourse.findById(userCourse._id)
       .populate('courses.courseId');
@@ -201,7 +210,7 @@ router.post('/user/add-course', async (req, res) => {
       course: populatedUserCourse.courses[populatedUserCourse.courses.length - 1]
     });
   } catch (error) {
-    console.error('Error details:', error);
+    console.error('Error:', error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -243,6 +252,38 @@ router.get('/:university/search', async (req, res) => {
       .select('courseCode courseName credits courseType language major');
     res.json(courses);
   } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 사용자 수강 과목 삭제 라우트 추가
+router.delete('/user/remove-course', async (req, res) => {
+  try {
+    const { userId, courseId } = req.body;
+    
+    const userCourse = await UserCourse.findOne({ userId });
+    if (!userCourse) {
+      return res.status(404).json({ message: '수강 정보를 찾을 수 없습니다.' });
+    }
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: '과목을 찾을 수 없습니다.' });
+    }
+
+    // 과목 삭제
+    userCourse.courses = userCourse.courses.filter(
+      course => course.courseId.toString() !== courseId
+    );
+
+    await userCourse.save();
+    
+    // 졸업 요건 업데이트
+    await updateGraduationStatus(userId, course, 'remove');
+
+    res.json({ message: '과목이 성공적으로 삭제되었습니다.' });
+  } catch (error) {
+    console.error('Error:', error);
     res.status(500).json({ message: error.message });
   }
 });
