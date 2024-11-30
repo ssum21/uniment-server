@@ -17,29 +17,37 @@ async function initializePortfolios() {
     const portfoliosData = [
       {
         userId: '672f04989fe771f0fffba2d6',
-        type: '어학성적',
+        type: '어학 성적 (TOEIC, TOEFL, OPIC 등)',
         title: 'TOEIC',
-        score: 780,
+        achievement: {
+          type: '점수',
+          score: 780
+        },
         date: new Date('2025-10-05'),
-        description: '카카오엔터프라이즈 지원 예정'
+        memo: '카카오엔터프라이즈 지원 예정'
       },
       {
         userId: '672f04989fe771f0fffba2d6',
-        type: '자격증',
+        type: '자격증 (기사, 한능검, 운전 면허 등)',
         title: '정보처리기사',
-        score: null,
+        achievement: {
+          type: '합격여부',
+          passed: true
+        },
         date: new Date('2024-05-15'),
-        description: '네이버 기술직 지원 예정'
+        memo: '네이버 기술직 지원 예정'
       },
       {
         userId: '672f04989fe771f0fffba2d6',
-        type: '수상경력',
+        type: '수상 경력 (공모전, 대회 수상 등)',
         title: '프로그래밍 대회 1위',
-        score: null,
+        achievement: {
+          type: '합격여부',
+          passed: true
+        },
         date: new Date('2023-09-10'),
-        description: '학교 주최 대회에서 수상'
-      },
-      // 추가 샘플 포트폴리오 데이터
+        memo: '학교 주최 대회에서 수상'
+      }
     ];
 
     // 데이터 삽입
