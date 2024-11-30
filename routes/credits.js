@@ -315,13 +315,24 @@ router.post('/:userId/manual-update', async (req, res) => {
     const { userId } = req.params;
     const { courseType, credits } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ 
-        message: "유효하지 않은 userId 형식입니다."
-      });
+    // 사용자와 졸업요건 정보 조회
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
     }
 
-    // 과목 타입에 따른 카테고리 결정
+    const requirement = await GraduationRequirement.findOne({
+      university: user.academicInfo.university,
+      major: user.academicInfo.major,
+      'admissionYearRange.start': { $lte: user.academicInfo.admissionYear },
+      'admissionYearRange.end': { $gte: user.academicInfo.admissionYear }
+    });
+
+    if (!requirement) {
+      return res.status(404).json({ message: "졸업요건 정보를 찾을 수 없습니다." });
+    }
+
+    // 카테고리 결정 (기존 switch문과 동일)
     let category, subCategory;
     switch(courseType) {
       case '전공기초':
@@ -350,7 +361,7 @@ router.post('/:userId/manual-update', async (req, res) => {
         break;
     }
 
-    // 해당 카테고리 학점 업데이트
+    // 해당 카테고리 학점 업데이트 또는 생성
     let creditDoc = await Credit.findOne({
       userId,
       category,
@@ -361,9 +372,22 @@ router.post('/:userId/manual-update', async (req, res) => {
       creditDoc.credits.current += credits;
       creditDoc.credits.remaining = creditDoc.credits.required - creditDoc.credits.current;
       await creditDoc.save();
+    } else {
+      // 새로운 카테고리 생성
+      const requiredCredits = getRequiredCredits(requirement, category, subCategory);
+      creditDoc = await Credit.create({
+        userId,
+        category,
+        subCategory,
+        credits: {
+          required: requiredCredits,
+          current: credits,
+          remaining: requiredCredits - credits
+        }
+      });
     }
 
-    // 전체 학점도 업데이트
+    // 전체 학점 업데이트 또는 생성
     let totalCredit = await Credit.findOne({
       userId,
       category: '전체',
@@ -374,9 +398,20 @@ router.post('/:userId/manual-update', async (req, res) => {
       totalCredit.credits.current += credits;
       totalCredit.credits.remaining = totalCredit.credits.required - totalCredit.credits.current;
       await totalCredit.save();
+    } else {
+      totalCredit = await Credit.create({
+        userId,
+        category: '전체',
+        subCategory: '필수',
+        credits: {
+          required: requirement.totalCredits,
+          current: credits,
+          remaining: requirement.totalCredits - credits
+        }
+      });
     }
 
-    res.json({ 
+    res.json({
       message: '학점이 성공적으로 업데이트되었습니다.',
       updatedCredits: {
         category: creditDoc,
@@ -386,6 +421,87 @@ router.post('/:userId/manual-update', async (req, res) => {
 
   } catch (error) {
     console.error('수동 학점 업데이트 중 오류:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 수동 학점 차감 API
+router.post('/:userId/manual-decrease', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { courseType, credits } = req.body;
+
+    // 사용자와 졸업요건 정보 조회
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
+    }
+
+    // 카테고리 결정
+    let category, subCategory;
+    switch(courseType) {
+      case '전공기초':
+        category = '전공';
+        subCategory = '기초';
+        break;
+      case '전공필수':
+        category = '전공';
+        subCategory = '필수';
+        break;
+      case '전공선택':
+        category = '전공';
+        subCategory = '선택';
+        break;
+      case '교양필수':
+        category = '교양';
+        subCategory = '필수';
+        break;
+      case '배분이수':
+        category = '교양';
+        subCategory = '배분';
+        break;
+      case '자유이수':
+        category = '교양';
+        subCategory = '자유';
+        break;
+    }
+
+    // 해당 카테고리 학점 차감
+    let creditDoc = await Credit.findOne({
+      userId,
+      category,
+      subCategory
+    });
+
+    if (creditDoc) {
+      creditDoc.credits.current = Math.max(0, creditDoc.credits.current - credits);
+      creditDoc.credits.remaining = creditDoc.credits.required - creditDoc.credits.current;
+      await creditDoc.save();
+    }
+
+    // 전체 학점 차감
+    let totalCredit = await Credit.findOne({
+      userId,
+      category: '전체',
+      subCategory: '필수'
+    });
+
+    if (totalCredit) {
+      totalCredit.credits.current = Math.max(0, totalCredit.credits.current - credits);
+      totalCredit.credits.remaining = totalCredit.credits.required - totalCredit.credits.current;
+      await totalCredit.save();
+    }
+
+    res.json({
+      message: '학점이 성공적으로 차감되었습니다.',
+      updatedCredits: {
+        category: creditDoc,
+        total: totalCredit
+      }
+    });
+
+  } catch (error) {
+    console.error('수동 학점 차감 중 오류:', error);
     res.status(500).json({ message: error.message });
   }
 });
