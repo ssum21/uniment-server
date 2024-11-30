@@ -5,20 +5,19 @@ const Credit = require('../models/Credit');
 const User = require('../models/User');
 const mongoose = require('mongoose');
 const GraduationRequirement = require('../models/GraduationRequirement');
+const UserCourse = require('../models/UserCourse');
 
 // 학점 정보 조회 (userId를 파라미터로 받도록 수정)
 router.get('/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     
-    // ObjectId 유효성 검사
-    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ 
         message: "유효하지 않은 userId 형식입니다."
       });
     }
 
-    // 사용자 존재 여부 확인
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ 
@@ -28,12 +27,11 @@ router.get('/:userId', async (req, res) => {
 
     const credits = await Credit.find({ userId });
     
-    // 카테고리별로 데이터 정리
     const organizedCredits = {
-      전체: { required: 0, current: 0, remaining: 0 },
-      전공: { required: 0, current: 0, remaining: 0 },
-      교양: { required: 0, current: 0, remaining: 0 },
-      기타: { required: 0, current: 0, remaining: 0 }
+      전체: { required: 0, current: 0, remaining: 0, progress: 0 },
+      전공: { required: 0, current: 0, remaining: 0, progress: 0 },
+      교양: { required: 0, current: 0, remaining: 0, progress: 0 },
+      기타: { required: 0, current: 0, remaining: 0, progress: 0 }
     };
 
     credits.forEach(credit => {
@@ -42,6 +40,13 @@ router.get('/:userId', async (req, res) => {
       organizedCredits[category].current += credit.credits.current;
       organizedCredits[category].remaining = 
         organizedCredits[category].required - organizedCredits[category].current;
+    });
+
+    // progress 값 계산 (0~1 사이)
+    Object.keys(organizedCredits).forEach(category => {
+      const { required, current } = organizedCredits[category];
+      organizedCredits[category].progress = required > 0 ? 
+        Math.min(current / required, 1) : 0;
     });
 
     res.json(organizedCredits);
@@ -223,6 +228,83 @@ router.post('/initialize', async (req, res) => {
     });
   } catch (error) {
     console.error('학점 초기화 중 오류:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.get('/:userId/detailed', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // 사용자 존재 여부 확인
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
+    }
+
+    // 졸업 요건 조회
+    const requirement = await GraduationRequirement.findOne({
+      university: user.academicInfo.university,
+      major: user.academicInfo.major,
+      'admissionYearRange.start': { $lte: user.academicInfo.admissionYear },
+      'admissionYearRange.end': { $gte: user.academicInfo.admissionYear }
+    });
+
+    // 사용자의 이수 과목 조회
+    const userCourses = await UserCourse.findOne({ userId })
+      .populate('courses.courseId');
+
+    // 카테고리별 상세 학점 계산
+    const detailedCredits = {
+      전체: {
+        학점: { current: 0, required: requirement?.totalCredits || 140 },
+        평점: { current: 0, required: 4.5 }
+      },
+      전공: {
+        기초: { current: 0, required: requirement?.majorRequirements.basic || 18 },
+        필수: { current: 0, required: requirement?.majorRequirements.required || 30 },
+        선택: { current: 0, required: requirement?.majorRequirements.elective || 24 }
+      },
+      교양: {
+        필수: { current: 0, required: requirement?.generalRequirements.required || 12 },
+        배분: { current: 0, required: requirement?.generalRequirements.distributed || 18 },
+        자유: { current: 0, required: requirement?.generalRequirements.free || 6 }
+      },
+      기타: {
+        외국어: { current: 0, required: requirement?.otherRequirements?.foreign || 6 },
+        SW: { current: 0, required: requirement?.otherRequirements?.software || 6 },
+        논문: { current: 0, required: requirement?.otherRequirements?.thesis || 0 }
+      }
+    };
+
+    // 이수 과목들의 학점을 카테고리별로 합산
+    userCourses?.courses.forEach(course => {
+      if (course.status === '수강완료') {
+        const { mainCategory, subCategory } = course.courseId.courseType;
+        const credits = course.courseId.credits;
+        
+        // 전체 학점 업데이트
+        detailedCredits.전체.학점.current += credits;
+        
+        // 카테고리별 학점 업데이트
+        switch(mainCategory) {
+          case '전공기초':
+            detailedCredits.전공.기초.current += credits;
+            break;
+          case '전공필수':
+            detailedCredits.전공.필수.current += credits;
+            break;
+          case '전공선택':
+            detailedCredits.전공.선택.current += credits;
+            break;
+          // ... 기타 카테고리들도 같은 방식으로 처리
+        }
+      }
+    });
+
+    res.json(detailedCredits);
+  } catch (error) {
+    console.error('상세 학점 조회 중 오류:', error);
     res.status(500).json({ message: error.message });
   }
 });
