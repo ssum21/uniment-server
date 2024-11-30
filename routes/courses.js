@@ -340,18 +340,24 @@ router.delete('/list/user/:userId/:courseId', async (req, res) => {
       return res.status(404).json({ message: '과목을 찾을 수 없습니다.' });
     }
 
+    // 과목이 실제로 사용자의 수강 목록에 있는지 확인
+    const courseExists = userCourse.courses.some(
+      c => c.courseId.toString() === courseId
+    );
+
+    if (!courseExists) {
+      return res.status(404).json({ message: '해당 과목이 수강 목록에 없습니다.' });
+    }
+
     // 과목 삭제
     userCourse.courses = userCourse.courses.filter(
-      course => course.courseId.toString() !== courseId
+      c => c.courseId.toString() !== courseId
     );
 
     await userCourse.save();
-    
-    // 졸업 요건 업데이트
-    await updateGraduationStatus(userId, course, 'remove');
 
-    // 업데이트된 과목 목록 반환
-    const updatedUserCourse = await UserCourse.findOne({ userId: userId })
+    // 업데이트된 과목 목록 조회
+    const updatedUserCourse = await UserCourse.findOne({ userId })
       .populate({
         path: 'courses.courseId',
         select: 'courseCode courseName credits courseType language major'
@@ -371,6 +377,7 @@ router.delete('/list/user/:userId/:courseId', async (req, res) => {
       message: '과목이 성공적으로 삭제되었습니다.',
       updatedCourses: formattedCourses
     });
+
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ message: error.message });
