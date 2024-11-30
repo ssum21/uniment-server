@@ -2,6 +2,9 @@
 const express = require('express');
 const router = express.Router();
 const Credit = require('../models/Credit');
+const User = require('../models/User');
+const GraduationRequirement = require('../models/GraduationRequirement');
+const UserCourse = require('../models/UserCourse');
 
 // 학점 정보 조회
 router.get('/credits', async (req, res) => {
@@ -51,6 +54,64 @@ router.post('/credits', async (req, res) => {
     res.status(201).json(credit);
   } catch (error) {
     res.status(400).json({ message: error.message });
+  }
+});
+
+// 학점 요약 정보 조회 API
+router.get('/credits/summary', async (req, res) => {
+  try {
+    const { userId } = req.query;
+    
+    // 사용자 정보 조회
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
+    }
+
+    // 전체 학점 정보 조회
+    const credits = await Credit.find({ userId });
+    
+    // 전체 학점 계산
+    let totalRequired = 0;
+    let totalCurrent = 0;
+    
+    credits.forEach(credit => {
+      if (credit.category === '전체') {
+        totalRequired = credit.credits.required;
+        totalCurrent = credit.credits.current;
+      }
+    });
+
+    // 졸업 요건 조회
+    const requirement = await GraduationRequirement.findOne({
+      university: user.academicInfo.university,
+      major: user.academicInfo.major,
+      'admissionYearRange.start': { $lte: user.academicInfo.admissionYear },
+      'admissionYearRange.end': { $gte: user.academicInfo.admissionYear }
+    });
+
+    // 대학/학과별 필요 과목 수 계산
+    const requiredCourses = requirement ? requirement.requiredCourses.length : 0;
+    
+    // 사용자의 이수 과목 수 조회
+    const userCourses = await UserCourse.findOne({ userId });
+    const completedCourses = userCourses ? userCourses.courses.length : 0;
+
+    res.json({
+      totalCredits: {
+        current: totalCurrent,
+        required: totalRequired,
+        remaining: totalRequired - totalCurrent
+      },
+      courses: {
+        completed: completedCourses,
+        required: requiredCourses,
+        remaining: requiredCourses - completedCourses
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
