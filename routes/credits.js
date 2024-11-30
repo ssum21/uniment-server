@@ -3,19 +3,25 @@ const express = require('express');
 const router = express.Router();
 const Credit = require('../models/Credit');
 const User = require('../models/User');
-const GraduationRequirement = require('../models/GraduationRequirement');
-const UserCourse = require('../models/UserCourse');
 const mongoose = require('mongoose');
 
-// 학점 정보 조회
-router.get('/credits', async (req, res) => {
+// 학점 정보 조회 (userId를 파라미터로 받도록 수정)
+router.get('/:userId', async (req, res) => {
   try {
-    const { userId } = req.query;
+    const { userId } = req.params;
     
-    // ObjectId 유효성 검사 추가
+    // ObjectId 유효성 검사
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ 
         message: "유효하지 않은 userId 형식입니다."
+      });
+    }
+
+    // 사용자 존재 여부 확인
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        message: "사용자를 찾을 수 없습니다."
       });
     }
 
@@ -46,7 +52,6 @@ router.get('/credits', async (req, res) => {
     });
   }
 });
-
 // 학점 정보 추가/수정
 router.post('/credits', async (req, res) => {
   try {
@@ -127,5 +132,4 @@ router.get('/credits/summary', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-
 module.exports = router;
