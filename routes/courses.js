@@ -297,36 +297,39 @@ router.delete('/user/remove-course', async (req, res) => {
   }
 });
 
-// 사용자가 추가한 과목 목록 조회 (간단한 형식)
+// routes/courses.js의 /list/user/:userId 라우트 핸들러 수정
 router.get('/list/user/:userId', async (req, res) => {
   try {
     const userId = req.params.userId;
-    
-    // UserCourse에서 사용자의 과목 목록을 조회하고 Course 정보를 populate
+    console.log('조회 요청된 userId:', userId);
+
+    // UserCourse 조회 및 Course 정보 populate
     const userCourse = await UserCourse.findOne({ userId })
       .populate({
         path: 'courses.courseId',
+        model: 'Course',
         select: 'courseCode courseName credits courseType language'
       });
 
-    if (!userCourse) {
-      return res.json([]); // 수강 정보가 없는 경우 빈 배열 반환
+    if (!userCourse || !userCourse.courses) {
+      console.log(`${userId}의 수강 정보가 없습니다.`);
+      return res.json([]);
     }
 
-    // 유효한 과목만 필터링하고 형식 변환
+    // 응답 데이터 형식 변환
     const formattedCourses = userCourse.courses
-      .filter(course => course.courseId) // null이나 undefined인 courseId 제외
+      .filter(course => course && course.courseId) // null 체크
       .map(course => ({
-        _id: course._id,
-        courseId: course.courseId._id,
+        _id: course.courseId._id,
         courseType: course.courseId.courseType,
         language: course.courseId.language,
         credits: course.courseId.credits,
         courseName: course.courseId.courseName,
         courseCode: course.courseId.courseCode,
-        status: course.status || '수강중' // status가 없는 경우 기본값 설정
+        status: course.status || '수강중'
       }));
 
+    console.log('응답 데이터:', formattedCourses);
     res.json(formattedCourses);
 
   } catch (error) {
