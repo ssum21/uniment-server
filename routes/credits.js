@@ -598,11 +598,11 @@ router.post('/:userId/manual-decrease', async (req, res) => {
         break;
       case '배분이수':
         category = '교양';
-        subCategory = '배분';
+        subCategory = '배분이수';
         break;
       case '자유이수':
         category = '교양';
-        subCategory = '자유';
+        subCategory = '자유이수';
         break;
     }
 
