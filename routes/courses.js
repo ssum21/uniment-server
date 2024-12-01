@@ -313,17 +313,19 @@ router.get('/list/user/:userId', async (req, res) => {
       return res.json([]); // 수강 정보가 없는 경우 빈 배열 반환
     }
 
-    // 원하는 형식으로 데이터 변환
-    const formattedCourses = userCourse.courses.map(course => ({
-      _id: course._id,
-      courseId: course.courseId._id,
-      courseType: course.courseId.courseType,
-      language: course.courseId.language,
-      credits: course.courseId.credits,
-      courseName: course.courseId.courseName,
-      courseCode: course.courseId.courseCode,
-      status: course.status
-    }));
+    // 유효한 과목만 필터링하고 형식 변환
+    const formattedCourses = userCourse.courses
+      .filter(course => course.courseId) // null이나 undefined인 courseId 제외
+      .map(course => ({
+        _id: course._id,
+        courseId: course.courseId._id,
+        courseType: course.courseId.courseType,
+        language: course.courseId.language,
+        credits: course.courseId.credits,
+        courseName: course.courseId.courseName,
+        courseCode: course.courseId.courseCode,
+        status: course.status || '수강중' // status가 없는 경우 기본값 설정
+      }));
 
     res.json(formattedCourses);
 
@@ -332,7 +334,6 @@ router.get('/list/user/:userId', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-
 
 // 사용자가 추가한 과목 삭제 API
 router.delete('/list/user/:userId/:courseId', async (req, res) => {
