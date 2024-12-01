@@ -20,8 +20,8 @@ function getRequiredCredits(requirement, category, subCategory) {
   } else if (category === '교양') {
     switch(subCategory) {
       case '필수': return requirement.generalRequirements?.required || 0;
-      case '배분이수': return requirement.generalRequirements?.distributed || 0;
-      case '자유이수': return requirement.generalRequirements?.free || 0;
+      case '배분': return requirement.generalRequirements?.distributed || 0;
+      case '자유': return requirement.generalRequirements?.free || 0;
     }
   }
   return 0;
@@ -413,7 +413,7 @@ router.get('/:userId/detailed', async (req, res) => {
           case '교양필수':
             detailedCredits.교양.필수.current += credits;
             break;
-          case '배분이수':
+          case '배분':
             detailedCredits.교양.배분.current += credits;
             break;
           case '자유이수':
@@ -493,7 +493,7 @@ router.post('/:userId/manual-update', async (req, res) => {
         break;
       case '배분이수':
         category = '교양';
-        subCategory = '배분이수';  // '배분'에서 '배분이수'로 수정
+        subCategory = '배분';  // '배분'에서 '배분이수'로 수정
         break;
       case '자유이수':
         category = '교양';
@@ -598,11 +598,11 @@ router.post('/:userId/manual-decrease', async (req, res) => {
         break;
       case '배분이수':
         category = '교양';
-        subCategory = '배분이수';
+        subCategory = '배분';
         break;
       case '자유이수':
         category = '교양';
-        subCategory = '자유이수';
+        subCategory = '자유';
         break;
     }
 
