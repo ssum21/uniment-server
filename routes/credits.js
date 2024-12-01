@@ -454,7 +454,6 @@ router.post('/:userId/manual-update', async (req, res) => {
     }
 
     // 카테고리 결정 (기존 switch문과 동일)
-    let category, subCategory;
     switch(courseType) {
       case '전공기초':
         category = '전공';
@@ -474,11 +473,11 @@ router.post('/:userId/manual-update', async (req, res) => {
         break;
       case '배분이수':
         category = '교양';
-        subCategory = '배분';
+        subCategory = '배분이수';  // enum 값과 일치하도록 수정
         break;
       case '자유이수':
         category = '교양';
-        subCategory = '자유';
+        subCategory = '자유이수';  // enum 값과 일치하도록 수정
         break;
     }
 
