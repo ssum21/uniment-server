@@ -173,3 +173,13 @@ process.on('SIGINT', async () => {
   await client.close();
   process.exit(0);
 });
+
+const admin = require('firebase-admin');
+const serviceAccount = require('./firebase-credentials.json');
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  storageBucket: 'your-project.appspot.com'
+});
+
+const bucket = admin.storage().bucket();

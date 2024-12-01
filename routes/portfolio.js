@@ -4,6 +4,7 @@ const router = express.Router();
 const Portfolio = require('../models/Portfolio');
 const mongoose = require('mongoose');
 const multer = require('multer');
+const { uploadImageToFirebase } = require('../utils/firebase');
 
 // Multer 설정
 const storage = multer.memoryStorage();
@@ -35,7 +36,8 @@ router.post('/', async (req, res) => {
         title,       // 포트폴리오 종류 (예: "TOEIC")
         achievement, // 정량적 성과 (점수 또는 합격여부)
         date,        // 취득/수행 날짜
-        memo         // 메모
+        memo,        // 메모
+        imageUrl    // Firebase Storage URL
       } = req.body;
 
       // 필수 필드 검증
@@ -60,7 +62,8 @@ router.post('/', async (req, res) => {
         title,
         achievement,
         date,
-        memo
+        memo,
+        image: imageUrl
       });
 
       // 생성된 객체 로깅
@@ -80,35 +83,14 @@ router.post('/', async (req, res) => {
 // 이미지가 포함된 포트폴리오 추가
 router.post('/with-image', upload.single('image'), async (req, res) => {
   try {
-    const { 
-      userId,
-      type,
-      title,
-      achievement,
-      date,
-      memo
-    } = req.body;
+    const { userId, type, title, achievement, date, memo } = req.body;
 
-    // 필수 필드 검증
-    if (!userId || !type || !title || !achievement || !date) {
-      return res.status(400).json({ message: '필수 필드가 누락되었습니다.' });
-    }
-
-    // userId 유효성 검사
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ message: '유효하지 않은 userId 형식입니다.' });
-    }
-
-    // 이미지 데이터 처리
-    let imageData = null;
+    // 이미지 업로드 및 URL 획득
+    let imageUrl = null;
     if (req.file) {
-      imageData = {
-        data: req.file.buffer.toString('base64'),
-        contentType: req.file.mimetype
-      };
+      imageUrl = await uploadImageToFirebase(req.file);
     }
 
-    // 새로운 포트폴리오 객체 생성
     const portfolio = new Portfolio({
       userId,
       type,
@@ -116,7 +98,7 @@ router.post('/with-image', upload.single('image'), async (req, res) => {
       achievement,
       date,
       memo,
-      image: imageData
+      image: imageUrl
     });
 
     const savedPortfolio = await portfolio.save();

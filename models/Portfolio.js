@@ -52,8 +52,8 @@ const portfolioSchema = new mongoose.Schema({
     type: String
   },
   image: {
-    data: String,  // Base64 형식의 이미지 데이터
-    contentType: String
+    type: String,  // Firebase Storage URL
+    required: false
   }
 }, {
   timestamps: true

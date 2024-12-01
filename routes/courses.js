@@ -300,28 +300,25 @@ router.delete('/user/remove-course', async (req, res) => {
 // 사용자가 추가한 과목 목록 조회 (간단한 형식)
 router.get('/list/user/:userId', async (req, res) => {
   try {
-    const { userId } = req.params;
-
-    // 사용자 확인
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
-    }
-
-    // populate()를 사용하여 과목 정보를 함께 가져옴
-    const userCourses = await UserCourse.findOne({ userId })
-      .populate({
-        path: 'courses.courseId',
-        model: 'Course'
+    const userId = req.params.userId;
+    
+    // 사용자의 수강 정보를 course 정보와 함께 조회
+    const courses = await Course.find({ userId })
+      .select({
+        courseId: 1,
+        courseType: 1,
+        language: 1,
+        credits: 1,
+        courseName: 1,
+        courseCode: 1,
+        status: 1
       });
 
-    if (!userCourses) {
-      return res.json({ courses: [] });
-    }
+    // 응답 형식 수정
+    res.json(courses);  // 중첩된 'courses' 객체 제거
 
-    res.json({ courses: userCourses.courses });
   } catch (error) {
-    console.error('과목 목록 조회 중 오류:', error);
+    console.error('수강 목록 조회 중 오류:', error);
     res.status(500).json({ message: error.message });
   }
 });
