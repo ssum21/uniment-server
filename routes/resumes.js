@@ -93,4 +93,23 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// 사용자의 자기소개서 개수 조회
+router.get('/count/:userId', async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
+      return res.status(400).json({ message: '유효하지 않은 userId 형식입니다.' });
+    }
+
+    const count = await Resume.countDocuments({ userId: req.params.userId });
+    
+    res.json({ 
+      count,
+      message: '자기소개서 개수 조회 성공'
+    });
+  } catch (error) {
+    console.error('자기소개서 개수 조회 중 오류:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router; 
