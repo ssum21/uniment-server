@@ -7,6 +7,26 @@ const mongoose = require('mongoose');
 const GraduationRequirement = require('../models/GraduationRequirement');
 const UserCourse = require('../models/UserCourse');
 
+// 학요 학점 계산 함수
+function getRequiredCredits(requirement, category, subCategory) {
+  if (!requirement) return 0;
+
+  if (category === '전공') {
+    switch(subCategory) {
+      case '기초': return requirement.majorRequirements?.basic || 0;
+      case '필수': return requirement.majorRequirements?.required || 0;
+      case '선택': return requirement.majorRequirements?.elective || 0;
+    }
+  } else if (category === '교양') {
+    switch(subCategory) {
+      case '필수': return requirement.generalRequirements?.required || 0;
+      case '배분이수': return requirement.generalRequirements?.distributed || 0;
+      case '자유이수': return requirement.generalRequirements?.free || 0;
+    }
+  }
+  return 0;
+}
+
 // 학점 정보 조회 (userId를 파라미터로 받도록 수정)
 router.get('/:userId', async (req, res) => {
   try {
@@ -70,7 +90,7 @@ router.get('/:userId', async (req, res) => {
             credit.credits.required - credit.credits.current;
         }
       }
-      // 교양 카테고리 업데이트
+      // 교양 카테고리 업데���트
       else if (category === '교양') {
         // 교양 전체
         organizedCredits.교양.전체.required += credit.credits.required;
@@ -223,7 +243,7 @@ router.post('/initialize', async (req, res) => {
           category: '전체',
           subCategory: '필수',
           credits: {
-            required: 130,  // 총 졸업 이수 학점
+            required: 130,  // 총 졸업 ��수 학점
             current: 0,
             remaining: 130
           }
@@ -473,11 +493,11 @@ router.post('/:userId/manual-update', async (req, res) => {
         break;
       case '배분이수':
         category = '교양';
-        subCategory = '배분이수';  // enum 값과 일치하도록 수정
+        subCategory = '배분이수';  // '배분'에서 '배분이수'로 수정
         break;
       case '자유이수':
         category = '교양';
-        subCategory = '자유이수';  // enum 값과 일치하도록 수정
+        subCategory = '자유이수';  // '자유'에서 '자유이수'로 수정
         break;
     }
 

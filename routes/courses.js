@@ -423,7 +423,6 @@ async function updateCredits(userId, course) {
       throw new Error('졸업요건 정보를 찾을 수 없습니다.');
     }
 
-    // 과목 타입에 따른 카테고리 결정
     let category, subCategory;
     switch(course.courseType) {
       case '전공기초':
@@ -444,14 +443,13 @@ async function updateCredits(userId, course) {
         break;
       case '배분이수':
         category = '교양';
-        subCategory = '배분';
+        subCategory = '배분이수';
         break;
       case '자유이수':
         category = '교양';
-        subCategory = '자유';
+        subCategory = '자유이수';
         break;
     }
-
     // 해당 카테고리의 학점 정보 업데이트 또는 생성
     let creditDoc = await Credit.findOne({
       userId,
@@ -511,17 +509,19 @@ async function updateCredits(userId, course) {
 
 // 졸업요건에서 필요 학점 가져오는 헬퍼 함수
 function getRequiredCredits(requirement, category, subCategory) {
+  if (!requirement) return 0;
+
   if (category === '전공') {
     switch(subCategory) {
-      case '기초': return requirement.majorRequirements.basic;
-      case '필수': return requirement.majorRequirements.required;
-      case '선택': return requirement.majorRequirements.elective;
+      case '기초': return requirement.majorRequirements?.basic || 0;
+      case '필수': return requirement.majorRequirements?.required || 0;
+      case '선택': return requirement.majorRequirements?.elective || 0;
     }
   } else if (category === '교양') {
     switch(subCategory) {
-      case '필수': return requirement.generalRequirements.required;
-      case '배분': return requirement.generalRequirements.distributed;
-      case '자유': return requirement.generalRequirements.free;
+      case '필수': return requirement.generalRequirements?.required || 0;
+      case '배분이수': return requirement.generalRequirements?.distributed || 0;
+      case '자유이수': return requirement.generalRequirements?.free || 0;
     }
   }
   return 0;
