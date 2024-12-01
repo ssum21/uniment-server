@@ -13,6 +13,7 @@ const courseRouter = require('./routes/courses');
 const authRouter = require('./routes/auth');
 const universityRouter = require('./routes/university');
 const creditsRouter = require('./routes/credits');
+const activitiesRouter = require('./routes/activities');
 require('dotenv').config();
 
 const app = express();
@@ -38,6 +39,7 @@ app.use('/api/resume', resumesRouter);
 app.use('/api/auth', authRouter);
 app.use('/api', universityRouter);  // university 라우터를 /api 경로에 연결
 app.use('/api/credits', creditsRouter);
+app.use('/api/activities', activitiesRouter);
 
 // MongoDB 연결
 mongoose.connect(process.env.MONGODB_URI)
