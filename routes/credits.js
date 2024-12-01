@@ -164,7 +164,7 @@ router.post('/initialize', async (req, res) => {
       });
     }
 
-    // 해당 학과의 졸업 요건 조회 (입학년도 기준)
+    // 해당 학��의 졸업 요건 조회 (입학년도 기준)
     const requirement = await GraduationRequirement.findOne({
       university,
       major,
@@ -297,8 +297,36 @@ router.get('/:userId/detailed', async (req, res) => {
           case '전공선택':
             detailedCredits.전공.선택.current += credits;
             break;
-          // ... 기타 카테고리들도 같은 방식으로 처리
+          case '교양필수':
+            detailedCredits.교양.필수.current += credits;
+            break;
+          case '배분이수':
+            detailedCredits.교양.배분.current += credits;
+            break;
+          case '자유이수':
+            detailedCredits.교양.자유.current += credits;
+            break;
+          default:
+            console.warn(`알 수 없는 과목 유형: ${mainCategory}`);
         }
+
+        // 남은 학점 계산 업데이트
+        detailedCredits.전체.학점.remaining = 
+          detailedCredits.전체.학점.required - detailedCredits.전체.학점.current;
+
+        // 각 카테고리별 남은 학점 계산
+        detailedCredits.전공.기초.remaining = 
+          detailedCredits.전공.기초.required - detailedCredits.전공.기초.current;
+        detailedCredits.전공.필수.remaining = 
+          detailedCredits.전공.필수.required - detailedCredits.전공.필수.current;
+        detailedCredits.전공.선택.remaining = 
+          detailedCredits.전공.선택.required - detailedCredits.전공.선택.current;
+        detailedCredits.교양.필수.remaining = 
+          detailedCredits.교양.필수.required - detailedCredits.교양.필수.current;
+        detailedCredits.교양.배분.remaining = 
+          detailedCredits.교양.배분.required - detailedCredits.교양.배분.current;
+        detailedCredits.교양.자유.remaining = 
+          detailedCredits.교양.자유.required - detailedCredits.교양.자유.current;
       }
     });
 
