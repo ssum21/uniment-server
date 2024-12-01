@@ -174,12 +174,17 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
-const admin = require('firebase-admin');
-const serviceAccount = require('./firebase-credentials.json');
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  storageBucket: 'your-project.appspot.com'
-});
-
-const bucket = admin.storage().bucket();
+// Firebase 초기화 부분을 조건부로 변경
+if (process.env.FIREBASE_ENABLED === 'true') {
+  const admin = require('firebase-admin');
+  try {
+    const serviceAccount = require('./firebase-credentials.json');
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET
+    });
+    console.log('Firebase 초기화 성공');
+  } catch (error) {
+    console.warn('Firebase 초기화 실패:', error.message);
+  }
+}
