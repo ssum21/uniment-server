@@ -318,7 +318,7 @@ router.post('/initialize', async (req, res) => {
         {
           userId,
           category: '기타',
-          subCategory: '일반',
+          subCategory: '기타',
           credits: {
             required: 2,
             current: 0,

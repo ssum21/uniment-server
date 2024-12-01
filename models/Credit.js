@@ -9,7 +9,7 @@ const creditSchema = new mongoose.Schema({
   },
   subCategory: {
     type: String,
-    enum: ['필수', '기초', '선택', '배분', '자유', '전체'],
+    enum: ['필수', '기초', '선택', '배분', '자유', '전체', '기타'],
     required: true
   },
   credits: {
