@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const User = require('../models/User');
-const UserActivity = require('../models/UserActivity');
+const Activity = require('../models/Activity');
 
 // 사용자의 대외활동 개수 조회 API
 router.get('/count/:userId', async (req, res) => {
@@ -21,12 +21,11 @@ router.get('/count/:userId', async (req, res) => {
       return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
     }
 
-    // UserActivity 모델에서 해당 사용자의 활동 개수 조회
-    const activities = await UserActivity.findOne({ userId });
-    const activityCount = activities ? activities.activities.length : 0;
+    // Activity 모델에서 해당 사용자의 활동 개수 직접 조회
+    const count = await Activity.countDocuments({ userId });
 
     res.json({ 
-      count: activityCount,
+      count,
       message: '대외활동 개수 조회 성공'
     });
 
