@@ -50,6 +50,10 @@ const portfolioSchema = new mongoose.Schema({
   },
   memo: {
     type: String
+  },
+  image: {
+    data: String,  // Base64 형식의 이미지 데이터
+    contentType: String
   }
 }, {
   timestamps: true

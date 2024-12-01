@@ -3,6 +3,23 @@ const express = require('express');
 const router = express.Router();
 const Portfolio = require('../models/Portfolio');
 const mongoose = require('mongoose');
+const multer = require('multer');
+
+// Multer 설정
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB 제한
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('이미지 파일만 업로드 가능합니다.'));
+    }
+  }
+});
 
 // 포트폴리오 추가
 // POST /api/portfolio
@@ -58,6 +75,57 @@ router.post('/', async (req, res) => {
       console.error('Error creating portfolio:', error);  // 에러 로깅
       res.status(400).json({ message: error.message });
     }
+});
+
+// 이미지가 포함된 포트폴리오 추가
+router.post('/with-image', upload.single('image'), async (req, res) => {
+  try {
+    const { 
+      userId,
+      type,
+      title,
+      achievement,
+      date,
+      memo
+    } = req.body;
+
+    // 필수 필드 검증
+    if (!userId || !type || !title || !achievement || !date) {
+      return res.status(400).json({ message: '필수 필드가 누락되었습니다.' });
+    }
+
+    // userId 유효성 검사
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: '유효하지 않은 userId 형식입니다.' });
+    }
+
+    // 이미지 데이터 처리
+    let imageData = null;
+    if (req.file) {
+      imageData = {
+        data: req.file.buffer.toString('base64'),
+        contentType: req.file.mimetype
+      };
+    }
+
+    // 새로운 포트폴리오 객체 생성
+    const portfolio = new Portfolio({
+      userId,
+      type,
+      title,
+      achievement,
+      date,
+      memo,
+      image: imageData
+    });
+
+    const savedPortfolio = await portfolio.save();
+    res.status(201).json(savedPortfolio);
+
+  } catch (error) {
+    console.error('포트폴리오 생성 중 오류:', error);
+    res.status(400).json({ message: error.message });
+  }
 });
 
 // 포트폴리오 목록 조회 list
