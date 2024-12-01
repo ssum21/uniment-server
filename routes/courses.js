@@ -302,26 +302,37 @@ router.get('/list/user/:userId', async (req, res) => {
   try {
     const userId = req.params.userId;
     
-    // 사용자의 수강 정보를 course 정보와 함께 조회
-    const courses = await Course.find({ userId })
-      .select({
-        courseId: 1,
-        courseType: 1,
-        language: 1,
-        credits: 1,
-        courseName: 1,
-        courseCode: 1,
-        status: 1
+    // UserCourse에서 사용자의 과목 목록을 조회하고 Course 정보를 populate
+    const userCourse = await UserCourse.findOne({ userId })
+      .populate({
+        path: 'courses.courseId',
+        select: 'courseCode courseName credits courseType language'
       });
 
-    // 응답 형식 수정
-    res.json(courses);  // 중첩된 'courses' 객체 제거
+    if (!userCourse) {
+      return res.json([]); // 수강 정보가 없는 경우 빈 배열 반환
+    }
+
+    // 원하는 형식으로 데이터 변환
+    const formattedCourses = userCourse.courses.map(course => ({
+      _id: course._id,
+      courseId: course.courseId._id,
+      courseType: course.courseId.courseType,
+      language: course.courseId.language,
+      credits: course.courseId.credits,
+      courseName: course.courseId.courseName,
+      courseCode: course.courseId.courseCode,
+      status: course.status
+    }));
+
+    res.json(formattedCourses);
 
   } catch (error) {
     console.error('수강 목록 조회 중 오류:', error);
     res.status(500).json({ message: error.message });
   }
 });
+
 
 // 사용자가 추가한 과목 삭제 API
 router.delete('/list/user/:userId/:courseId', async (req, res) => {
