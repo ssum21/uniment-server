@@ -209,87 +209,116 @@ router.post('/initialize', async (req, res) => {
     const { userId, university, major } = req.body;
     
     // 이미 초기화된 학점 정보가 있는지 확인
-    const existingCredits = await Credit.findOne({ 
-      userId, 
-      category: '전체' 
-    });
-    
+    const existingCredits = await Credit.findOne({ userId });
     if (existingCredits) {
-      return res.status(400).json({ 
-        message: "이미 학점 정보가 초기화되어 있습니다." 
-      });
+      return res.status(400).json({ message: '이미 초기화된 학점 정보가 있습니다.' });
     }
 
-    // 사용자 정보 조회로 입학년도 확인
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ 
-        message: "사용자를 찾을 수 없습니다." 
+    // 경희대학교 컴퓨터공학과 졸업요건 설정
+    if (university === '경희대학교' && major === '컴퓨터공학과') {
+      const credits = [
+        // 전체 학점
+        {
+          userId,
+          category: '전체',
+          subCategory: '필수',
+          credits: {
+            required: 130,  // 총 졸업 이수 학점
+            current: 0,
+            remaining: 130
+          }
+        },
+        // 전공 기초
+        {
+          userId,
+          category: '전공',
+          subCategory: '기초',
+          credits: {
+            required: 18,
+            current: 0,
+            remaining: 18
+          }
+        },
+        // 전공 필수
+        {
+          userId,
+          category: '전공',
+          subCategory: '필수',
+          credits: {
+            required: 48,
+            current: 0,
+            remaining: 48
+          }
+        },
+        // 전공 선택
+        {
+          userId,
+          category: '전공',
+          subCategory: '선택',
+          credits: {
+            required: 30,
+            current: 0,
+            remaining: 30
+          }
+        },
+        // 교양 필수
+        {
+          userId,
+          category: '교양',
+          subCategory: '필수',
+          credits: {
+            required: 17,
+            current: 0,
+            remaining: 17
+          }
+        },
+        // 교양 배분
+        {
+          userId,
+          category: '교양',
+          subCategory: '배분',
+          credits: {
+            required: 12,
+            current: 0,
+            remaining: 12
+          }
+        },
+        // 교양 자유
+        {
+          userId,
+          category: '교양',
+          subCategory: '자유',
+          credits: {
+            required: 3,
+            current: 0,
+            remaining: 3
+          }
+        },
+        // 기타
+        {
+          userId,
+          category: '기타',
+          subCategory: '일반',
+          credits: {
+            required: 2,
+            current: 0,
+            remaining: 2
+          }
+        }
+      ];
+
+      // 학점 정보 일괄 생성
+      await Credit.insertMany(credits);
+
+      res.status(201).json({
+        message: '학점 정보가 초기화되었습니다.',
+        credits
+      });
+    } else {
+      res.status(400).json({ 
+        message: '지원하지 않는 대학/학과입니다.' 
       });
     }
-
-    // 해당 학의 졸업 요건 조회 (입학년도 기준)
-    const requirement = await GraduationRequirement.findOne({
-      university,
-      major,
-      'admissionYearRange.start': { $lte: user.academicInfo.admissionYear },
-      'admissionYearRange.end': { $gte: user.academicInfo.admissionYear }
-    });
-
-    if (!requirement) {
-      return res.status(404).json({ 
-        message: "해당 학과의 졸업 요건을 찾을 수 없습니다." 
-      });
-    }
-
-    // 기본 학점 정보 생성
-    const credits = [
-      {
-        userId,
-        category: '전체',
-        subCategory: '필수',
-        credits: {
-          required: requirement.totalCredits,
-          current: 0,
-          remaining: requirement.totalCredits
-        }
-      },
-      {
-        userId,
-        category: '전공',
-        subCategory: '필수',
-        credits: {
-          required: requirement.majorRequirements.required + 
-                   requirement.majorRequirements.basic + 
-                   requirement.majorRequirements.elective,
-          current: 0,
-          remaining: requirement.majorRequirements.required + 
-                    requirement.majorRequirements.basic + 
-                    requirement.majorRequirements.elective
-        }
-      },
-      {
-        userId,
-        category: '교양',
-        subCategory: '필수',
-        credits: {
-          required: requirement.generalRequirements.required + 
-                   requirement.generalRequirements.distributed + 
-                   requirement.generalRequirements.free,
-          current: 0,
-          remaining: requirement.generalRequirements.required + 
-                    requirement.generalRequirements.distributed + 
-                    requirement.generalRequirements.free
-        }
-      }
-    ];
-
-    await Credit.insertMany(credits);
-
-    res.status(201).json({
-      message: "학점 정보가 초기화되었습니다.",
-      credits
-    });
   } catch (error) {
     console.error('학점 초기화 중 오류:', error);
     res.status(500).json({ message: error.message });
