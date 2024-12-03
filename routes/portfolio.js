@@ -162,7 +162,6 @@ router.get('/count/:userId', async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
       return res.status(400).json({ message: '유효하지 않은 userId 형식입니다.' });
     }
-
     const count = await Portfolio.countDocuments({ userId: req.params.userId });
     
     res.json({ 

@@ -1,3 +1,7 @@
 node_modules
 .env
 firebase-credentials.json
+uniment-key.pem
+docker-compose.yml
+Dockerfile
+.dockerignore

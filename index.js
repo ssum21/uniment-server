@@ -10,7 +10,7 @@ const portfolioRouter = require('./routes/portfolio');
 const resumesRouter = require('./routes/resumes');  // 수정된 부분
 const userRouter = require('./routes/users');
 const courseRouter = require('./routes/courses');
-const authRouter = require('./routes/auth');
+const authRouter = require('./rutes/auth');
 const universityRouter = require('./routes/university');
 const creditsRouter = require('./routes/credits');
 const activitiesRouter = require('./routes/activities');
@@ -20,7 +20,7 @@ const app = express();
 
 // 미들웨어 설정
 app.use(cors({
-  origin: '*', // 실제 배포 시에는 특정 도메인으로 제한하세요
+  origin: '*', 
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
