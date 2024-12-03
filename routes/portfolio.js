@@ -37,7 +37,7 @@ router.post('/', async (req, res) => {
         achievement, // 정량적 성과 (점수 또는 합격여부)
         date,        // 취득/수행 날짜
         memo,        // 메모
-        imageUrl    // Firebase Storage URL
+        image    // Firebase Storage URL
       } = req.body;
 
       // 필수 필드 검증
@@ -63,7 +63,7 @@ router.post('/', async (req, res) => {
         achievement,
         date,
         memo,
-        image: imageUrl
+        image
       });
 
       // 생성된 객체 로깅
@@ -78,36 +78,6 @@ router.post('/', async (req, res) => {
       console.error('Error creating portfolio:', error);  // 에러 로깅
       res.status(400).json({ message: error.message });
     }
-});
-
-// 이미지가 포함된 포트폴리오 추가
-router.post('/with-image', upload.single('image'), async (req, res) => {
-  try {
-    const { userId, type, title, achievement, date, memo } = req.body;
-
-    // 이미지 업로드 및 URL 획득
-    let imageUrl = null;
-    if (req.file) {
-      imageUrl = await uploadImageToFirebase(req.file);
-    }
-
-    const portfolio = new Portfolio({
-      userId,
-      type,
-      title,
-      achievement,
-      date,
-      memo,
-      image: imageUrl
-    });
-
-    const savedPortfolio = await portfolio.save();
-    res.status(201).json(savedPortfolio);
-
-  } catch (error) {
-    console.error('포트폴리오 생성 중 오류:', error);
-    res.status(400).json({ message: error.message });
-  }
 });
 
 // 포트폴리오 목록 조회 list
