@@ -90,7 +90,7 @@ router.get('/:userId', async (req, res) => {
             credit.credits.required - credit.credits.current;
         }
       }
-      // 교양 카테고리 업데���트
+      // 교양 카테고리 업데이트
       else if (category === '교양') {
         // 교양 전체
         organizedCredits.교양.전체.required += credit.credits.required;
@@ -115,21 +115,25 @@ router.get('/:userId', async (req, res) => {
       }
     });
 
-    // progress 값 계산
+    // progress 값 계산 및 제한
     Object.keys(organizedCredits).forEach(mainCategory => {
       if (typeof organizedCredits[mainCategory] === 'object' && !organizedCredits[mainCategory].progress) {
         if (organizedCredits[mainCategory].required > 0) {
-          organizedCredits[mainCategory].progress = 
-            organizedCredits[mainCategory].current / organizedCredits[mainCategory].required;
+          organizedCredits[mainCategory].progress = Math.min(
+            organizedCredits[mainCategory].current / organizedCredits[mainCategory].required,
+            1.0
+          );
         }
         
         // 세부 카테고리의 progress 계산
         if (mainCategory === '전공' || mainCategory === '교양') {
           Object.keys(organizedCredits[mainCategory]).forEach(subCategory => {
             if (organizedCredits[mainCategory][subCategory].required > 0) {
-              organizedCredits[mainCategory][subCategory].progress = 
+              organizedCredits[mainCategory][subCategory].progress = Math.min(
                 organizedCredits[mainCategory][subCategory].current / 
-                organizedCredits[mainCategory][subCategory].required;
+                organizedCredits[mainCategory][subCategory].required,
+                1.0
+              );
             }
           });
         }
@@ -243,7 +247,7 @@ router.post('/initialize', async (req, res) => {
           category: '전체',
           subCategory: '필수',
           credits: {
-            required: 130,  // 총 졸업 ��수 학점
+            required: 130,  // 총 졸업 수 학점
             current: 0,
             remaining: 130
           }
